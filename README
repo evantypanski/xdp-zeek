@@ -1,5 +1,5 @@
+# XDP::Shunter
 
-XDP::Shunter
-=================================
+Using XDP to drop packets for now. You can see what it is in the `test.zeek` file.
 
-<Insert plugin documentation here.>
+Note that the filter.o file is currently hardcoded to my system :)
