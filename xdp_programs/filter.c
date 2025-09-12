@@ -41,23 +41,23 @@ int xdp_filter(struct xdp_md* ctx) {
     struct five_tuple tuple = {0};
     tuple.ip_source = iph->saddr;
     tuple.ip_destination = iph->daddr;
-    tuple.protocol = iph->protocol;
+    // tuple.protocol = iph->protocol;
 
     if ( iph->protocol == IPPROTO_TCP ) {
         struct tcphdr* tcph = (void*)iph + sizeof(*iph);
         if ( (void*)tcph + sizeof(*tcph) > data_end ) {
             return XDP_PASS;
         }
-        tuple.port_source = tcph->source;
-        tuple.port_destination = tcph->dest;
+        // tuple.port_source = tcph->source;
+        // tuple.port_destination = tcph->dest;
     }
     else if ( iph->protocol == IPPROTO_UDP ) {
         struct udphdr* udph = (void*)iph + sizeof(*iph);
         if ( (void*)udph + sizeof(*udph) > data_end ) {
             return XDP_PASS;
         }
-        tuple.port_source = udph->source;
-        tuple.port_destination = udph->dest;
+        // tuple.port_source = udph->source;
+        // tuple.port_destination = udph->dest;
     }
     else {
         return XDP_PASS;
