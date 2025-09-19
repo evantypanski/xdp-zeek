@@ -1,0 +1,77 @@
+# From Zeek
+
+Checks: [-*,
+         bugprone-*,
+         performance-*,
+         modernize-*,
+         readability-isolate-declaration,
+
+         # Enable a very limited number of the cppcoreguidelines checkers.
+         # See the notes for some of the rest of them below.
+         cppcoreguidelines-macro-usage,
+         cppcoreguidelines-misleading-capture-default-by-value,
+         cppcoreguidelines-virtual-class-destructor,
+
+         # Skipping these temporarily because they are very noisy
+         -bugprone-forward-declaration-namespace,
+         -bugprone-narrowing-conversions,
+         -bugprone-unchecked-optional-access,
+         -performance-unnecessary-value-param,
+         -modernize-use-equals-default,
+         -modernize-use-integer-sign-comparison,
+
+         # The following cause either lots of pointless or advisory warnings
+         -bugprone-easily-swappable-parameters,
+         -bugprone-nondeterministic-pointer-iteration-order,
+
+         # bifcl generates a lot of code with double underscores in their name.
+         # ZAM uses a few identifiers that start with underscores or have
+         # double-underscores in the name.
+         -bugprone-reserved-identifier,
+
+         # bifcl generates almost every switch statement without a default case
+         # and so this one generates a lot of warnings.
+         -bugprone-switch-missing-default-case,
+
+         # These report warnings that are rather difficult to fix or are things
+         # we simply don't want to fix.
+         -bugprone-undefined-memory-manipulation,
+         -bugprone-pointer-arithmetic-on-polymorphic-object,
+         -bugprone-empty-catch,
+         -bugprone-exception-escape,
+         -bugprone-suspicious-include,
+         -modernize-avoid-c-arrays,
+         -modernize-concat-nested-namespaces,
+         -modernize-raw-string-literal,
+         -modernize-use-auto,
+         -modernize-use-nodiscard,
+         -modernize-use-trailing-return-type,
+         -modernize-use-designated-initializers,
+
+         # This one returns a bunch of findings in DFA and the sqlite library.
+         # We're unlikely to fix either of them.
+         -performance-no-int-to-ptr,
+
+         # These cppcoreguidelines checkers are things we should investigate
+         # and possibly fix, but there are so many findings that we're holding
+         # off doing it for now.
+         #cppcoreguidelines-init-variables,
+         #cppcoreguidelines-prefer-member-initializer,
+         #cppcoreguidelines-pro-type-member-init,
+         #cppcoreguidelines-pro-type-cstyle-cast,
+         #cppcoreguidelines-pro-type-static-cast-downcast,
+         #cppcoreguidelines-special-member-functions,
+
+         # These are features in newer version of C++ that we don't have
+         # access to yet.
+         -modernize-use-std-format,
+         -modernize-use-std-print,
+]
+
+HeaderFilterRegex: '.h'
+ExcludeHeaderFilterRegex: '.*(auxil|3rdparty)/.*'
+SystemHeaders: false
+CheckOptions:
+    - key: modernize-use-default-member-init.UseAssignment
+      value: 'true'
+WarningsAsErrors: '*'
