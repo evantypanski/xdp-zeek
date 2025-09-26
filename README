@@ -6,7 +6,8 @@ Using XDP to drop packets for now:
 global xdp_prog: opaque of XDP::Program;
 
 event zeek_init() {
-    xdp_prog = XDP::start_shunt();
+    local opts: XDP::ShuntOptions = [$attach_mode = XDP::SKB];
+    xdp_prog = XDP::start_shunt(opts);
 }
 
 event http_request(c: connection, method: string, original_URI: string,

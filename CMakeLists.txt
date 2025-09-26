@@ -13,8 +13,7 @@ zeek_plugin_begin(XDP Shunter ${ZEEK_PLUGIN_BEGIN_OPTS})
 zeek_plugin_cc(src/Plugin.cc src/XDPProgram.cc src/bpf/UserXDP.cc)
 zeek_plugin_bif(src/shunter.bif)
 zeek_plugin_dist_files(README CHANGES COPYING VERSION)
-zeek_plugin_scripts(scripts/__load__.zeek scripts/__preload__.zeek scripts/types.zeek
-                    scripts/XDP/Shunter/__load__.zeek)
+zeek_plugin_scripts(scripts/__load__.zeek scripts/__preload__.zeek scripts/types.zeek)
 zeek_plugin_end()
 
 file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" VERSION LIMIT_COUNT 1)
