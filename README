@@ -15,7 +15,7 @@ event http_request(c: connection, method: string, original_URI: string,
     {
     print fmt("HTTP request: %s %s (%s->%s)", method, original_URI, c$id$orig_h,
         c$id$resp_h);
-    XDP::drop(xdp_prog, c$id);
+    XDP::shunt_conn_id(xdp_prog, c$id);
     }
 
 event zeek_done() {
