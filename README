@@ -25,6 +25,5 @@ event zeek_done() {
 
 ## TODOs
 
-- Combine source/dest subnets to just pairs, so it only counts if it's between the two subnets
 - Allow initial BPF map state
 - Test it
