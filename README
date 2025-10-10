@@ -26,4 +26,6 @@ event zeek_done() {
 ## TODOs
 
 - Allow initial BPF map state
+- Make unshunt return the stats shunted
+- Maybe track FIN packets
 - Test it
