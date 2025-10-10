@@ -1,0 +1,6 @@
+[package]
+script_dir = scripts
+test_command = cd tests && btest -c btest.cfg
+description = XDP traffic shunter
+plugin_dir = build/XDP_Shunter.tgz
+build_command = ./configure && make
