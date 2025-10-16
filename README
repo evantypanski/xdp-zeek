@@ -26,5 +26,4 @@ event zeek_done() {
 ## TODOs
 
 - Allow initial BPF map state
-- Maybe track FIN packets
 - Test it
