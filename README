@@ -1,29 +1,55 @@
 # Zeek XDP Filtering
 
-Using XDP to drop packets for now:
+A zeek plugin to shunt network traffic in Zeek using XDP.
+
+This is a work in progress.
+
+Example:
 
 ```
 global xdp_prog: opaque of XDP::Program;
 
-event zeek_init() {
-    local opts: XDP::ShuntOptions = [$attach_mode = XDP::SKB];
-    xdp_prog = XDP::start_shunt(opts);
-}
+event zeek_init()
+	{
+	local opts: XDP::ShuntOptions = [$attach_mode=XDP::SKB];
+	xdp_prog = XDP::start_shunt(opts);
+	}
 
-event http_request(c: connection, method: string, original_URI: string,
-    unescaped_URI: string, version: string)
-    {
-    print fmt("HTTP request: %s %s (%s->%s)", method, original_URI, c$id$orig_h,
-        c$id$resp_h);
-    XDP::ShuntConnID::shunt(xdp_prog, c$id);
-    }
+# Checks if there was a shunted fin/rst and unshunts it if so.
+function unshunt_fin_connections()
+	{
+	local map = XDP::ShuntConnID::get_map(xdp_prog);
+	for ( key, val in map )
+		{
+		if ( val$fin != 0 || val$rst != 0 )
+			{
+			local stats = XDP::ShuntConnID::unshunt(xdp_prog, key);
+			print fmt("Unshunted connection from %s->%s. Transmitted %d bytes and %d packets. Last packet was at %s.",
+			    key$orig_h, key$resp_h, stats$bytes_from_orig +
+			    stats$bytes_from_resp, stats$packets_from_orig +
+			    stats$packets_from_resp, stats$timestamp);
+			}
+		}
+	}
 
-event zeek_done() {
-    XDP::end_shunt(xdp_prog);
-}
+event ssl_established(c: connection)
+	{
+	# Unshunt before adding to the map
+	unshunt_fin_connections();
+
+	print "Shunting", c$id;
+	XDP::ShuntConnID::shunt(xdp_prog, c$id);
+	}
+
+event zeek_done()
+	{
+	XDP::end_shunt(xdp_prog);
+	}
 ```
 
 ## TODOs
 
 - Allow initial BPF map state
+- Add way to filter the returned maps before converting to Zeek vals
+- Potentially split the IP pair and conn id shunting in different XDP programs
 - Test it
