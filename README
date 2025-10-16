@@ -18,17 +18,14 @@ event zeek_init()
 # Checks if there was a shunted fin/rst and unshunts it if so.
 function unshunt_fin_connections()
 	{
-	local map = XDP::ShuntConnID::get_map(xdp_prog);
+	local map = XDP::ShuntConnID::get_map(xdp_prog, T);
 	for ( key, val in map )
 		{
-		if ( val$fin != 0 || val$rst != 0 )
-			{
-			local stats = XDP::ShuntConnID::unshunt(xdp_prog, key);
-			print fmt("Unshunted connection from %s->%s. Transmitted %d bytes and %d packets. Last packet was at %s.",
-			    key$orig_h, key$resp_h, stats$bytes_from_orig +
-			    stats$bytes_from_resp, stats$packets_from_orig +
-			    stats$packets_from_resp, stats$timestamp);
-			}
+		local stats = XDP::ShuntConnID::unshunt(xdp_prog, key);
+		print fmt("Unshunted connection from %s->%s. Transmitted %d bytes and %d packets. Last packet was at %s.",
+		    key$orig_h, key$resp_h, stats$bytes_from_orig +
+		    stats$bytes_from_resp, stats$packets_from_orig +
+		    stats$packets_from_resp, stats$timestamp);
 		}
 	}
 
