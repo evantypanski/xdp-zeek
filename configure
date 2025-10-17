@@ -26,7 +26,6 @@ Usage: $0 [OPTIONS]
     --with-binpac=DIR          Path to BinPAC installation root
     --with-broker=DIR          Path to Broker installation root
     --with-bifcl=PATH          Path to bifcl executable
-    --enable-debug             Compile in debugging mode
     --disable-cpp-tests        Don't build C++ unit tests
 EOF
 
@@ -92,10 +91,6 @@ while [ $# -ne 0 ]; do
             append_cache_entry BifCl_EXE PATH $optarg
             ;;
 
-        --enable-debug)
-            append_cache_entry BRO_PLUGIN_ENABLE_DEBUG BOOL true
-            ;;
-
         --disable-cpp-tests)
             zeek_plugin_begin_opts="DISABLE_CPP_TESTS;$zeek_plugin_begin_opts"
             ;;
@@ -135,17 +130,10 @@ if [ -z "$zeekdist" ]; then
     fi
 
     append_cache_entry BRO_CONFIG_PREFIX PATH $(${zeek_config} --prefix)
-    append_cache_entry BRO_CONFIG_INCLUDE_DIR PATH $(${zeek_config} --include_dir)
     append_cache_entry BRO_CONFIG_PLUGIN_DIR PATH $(${zeek_config} --plugin_dir)
-    append_cache_entry BRO_CONFIG_LIB_DIR PATH $(${zeek_config} --lib_dir)
-    append_cache_entry BRO_CONFIG_CMAKE_DIR PATH $(${zeek_config} --cmake_dir)
     append_cache_entry CMAKE_MODULE_PATH PATH $(${zeek_config} --cmake_dir)
 
     build_type=$(${zeek_config} --build_type)
-
-    if [ "$build_type" = "debug" ]; then
-        append_cache_entry BRO_PLUGIN_ENABLE_DEBUG BOOL true
-    fi
 
     if [ -z "$binpac_root" ]; then
         append_cache_entry BinPAC_ROOT_DIR PATH $(${zeek_config} --binpac_root)
