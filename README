@@ -19,15 +19,55 @@ event zeek_init()
 	xdp_prog = XDP::start_shunt(opts);
 	}
 
-# Checks if there was a shunted fin/rst and unshunts it if so.
-function unshunt_fin_connections()
+event XDP::ShuntConnID::first_fin(cid: conn_id)
 	{
-	local map = XDP::ShuntConnID::get_map(xdp_prog, T);
-	for ( key, val in map )
+	local stats = XDP::ShuntConnID::unshunt(xdp_prog, cid);
+	if ( stats$present )
 		{
-		local stats = XDP::ShuntConnID::unshunt(xdp_prog, key);
+		print fmt("Unshunted connection from %s:%d->%s:%d. Transmitted %d bytes and %d packets. Last packet was at %s.",
+		    cid$orig_h, cid$orig_p, cid$resp_h, cid$resp_p,
+		    stats$bytes_from_orig + stats$bytes_from_resp,
+		    stats$packets_from_orig + stats$packets_from_resp,
+		    stats$timestamp);
+		}
+	}
+
+event ssl_established(c: connection)
+	{
+	print "Shunting", c$id;
+	XDP::ShuntConnID::shunt(xdp_prog, c$id);
+	}
+
+event zeek_done()
+	{
+	XDP::end_shunt(xdp_prog);
+	}
+```
+
+### IP Pairs
+
+Shunting with IP pairs is similar:
+
+```
+global xdp_prog: opaque of XDP::Program;
+
+event zeek_init()
+	{
+	local opts: XDP::ShuntOptions = [
+		$attach_mode=XDP::SKB, # SKB is more for testing, NATIVE is better
+		$conn_id_map_max_size=1, # We can't remove the map, so make it very small
+		$ip_pair_map_max_size=131072, # A bit over the max number of shunted connections
+	];
+	xdp_prog = XDP::start_shunt(opts);
+	}
+
+event XDP::ShuntIPPair::first_fin(pair: XDP::ip_pair)
+	{
+	local stats = XDP::ShuntIPPair::unshunt(xdp_prog, pair$ip1, pair$ip2);
+	if ( stats$present )
+		{
 		print fmt("Unshunted connection from %s->%s. Transmitted %d bytes and %d packets. Last packet was at %s.",
-		    key$orig_h, key$resp_h, stats$bytes_from_orig +
+		    pair$ip1, pair$ip2, stats$bytes_from_orig +
 		    stats$bytes_from_resp, stats$packets_from_orig +
 		    stats$packets_from_resp, stats$timestamp);
 		}
@@ -35,11 +75,8 @@ function unshunt_fin_connections()
 
 event ssl_established(c: connection)
 	{
-	# Unshunt before adding to the map
-	unshunt_fin_connections();
-
 	print "Shunting", c$id;
-	XDP::ShuntConnID::shunt(xdp_prog, c$id);
+	XDP::ShuntIPPair::shunt(xdp_prog, c$id$orig_h, c$id$resp_h);
 	}
 
 event zeek_done()
