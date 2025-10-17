@@ -56,4 +56,12 @@ static __always_inline int compare_ips(const struct in6_addr* ip1, const struct 
     return 0;
 }
 
+struct canonical_fin {
+    struct canonical_tuple key;
+};
+
+struct ip_pair_fin {
+    struct ip_pair_key key;
+};
+
 #endif /* __FILTER_COMMON_H */
