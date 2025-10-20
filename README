@@ -1,10 +1,6 @@
 # Zeek XDP Filtering
 
-A zeek plugin to shunt network traffic in Zeek using XDP.
-
-This is a work in progress.
-
-Example:
+Uses XDP in order to "shunt" traffic - that way, Zeek doesn't waste its time analyzing packets that won't get any useful information, like encrypted sessions:
 
 ```
 global xdp_prog: opaque of XDP::Program;
@@ -85,9 +81,18 @@ event zeek_done()
 	}
 ```
 
+## Internals
+
+This plugin uses XDP (eXpress Data Path) in order to filter traffic before it reaches user applications, like Zeek. This is filtering purely on the network device that Zeek sees traffic from.
+
+The XDP program itself simply checks if a certain IP pair or 5-tuple are in the "shunting map." This map is managed entirely from user space, that is, the Zeek program.
+
+Any shunted connections keep state about certain statistics, such as the last packet seen and how many bytes/packets were seen from each direction. This may help the user determine how effective the shunting was, or simply unshunt connections after a certain time elapsed without any traffic.
+
+Shunting may raise some Zeek events, namely for FIN and RST TCP packets. This is done via BPF ring buffers.
+
 ## TODOs
 
-- Allow initial BPF map state
-- Add way to filter the returned maps before converting to Zeek vals
+- Add (better) way to filter the returned maps before converting to Zeek vals
 - Potentially split the IP pair and conn id shunting in different XDP programs
 - Test it
