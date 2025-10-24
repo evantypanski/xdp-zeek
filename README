@@ -1,6 +1,18 @@
 # Zeek XDP Filtering
 
-Uses XDP in order to "shunt" traffic - that way, Zeek doesn't waste its time analyzing packets that won't get any useful information, like encrypted sessions:
+Uses XDP in order to "shunt" traffic - that way, Zeek doesn't waste its time analyzing packets that won't get any useful information.
+
+You can use the provided configuration that is similar in functionality to [bro-react](https://github.com/JustinAzoff/bro-react):
+
+```
+@load xdp/bulk
+```
+
+This provides a few configuration knobs, but it should shunt connections that are deemed "too large" and unshunt it when a certain time elapses without a packet or a FIN/RST packet is seen.
+
+## Manual Shunting
+
+You may also choose to manually shunt connections based on your own criteria. You can use the provided BIFs for that. For example, this shunts encrypted sessions, then unshunts when it sees a FIN/RST TCP packet:
 
 ```
 global xdp_prog: opaque of XDP::Program;
