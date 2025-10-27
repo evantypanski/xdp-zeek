@@ -15,6 +15,7 @@ This provides a few configuration knobs, but it should shunt connections that ar
 You may also choose to manually shunt connections based on your own criteria. You can use the provided BIFs for that. For example, this shunts encrypted sessions, then unshunts when it sees a FIN/RST TCP packet:
 
 ```
+
 @load xdp
 @load xdp/conn_id
 
@@ -32,20 +33,26 @@ event zeek_init()
 
 event XDP::ShuntConnID::first_fin(cid: conn_id)
 	{
-	local stats = XDP::ShuntConnID::unshunt(xdp_prog, cid);
-	if ( stats$present )
-		{
-		print fmt("Unshunted connection from %s:%d->%s:%d. Transmitted %d bytes and %d packets. Last packet was at %s.",
-		    cid$orig_h, cid$orig_p, cid$resp_h, cid$resp_p,
-		    stats$bytes_from_1 + stats$bytes_from_2,
-		    stats$packets_from_1 + stats$packets_from_2,
-		    stats$timestamp);
-		}
+	XDP::ShuntConnID::unshunt(xdp_prog, cid);
+	}
+
+event XDP::ShuntConnID::unshunted_conn(cid: conn_id, stats: XDP::ShuntedStats)
+	{
+	assert stats$present;
+	print fmt("Unshunted connection from %s:%d<->%s:%d. Transmitted %d bytes and %d packets. Last packet was at %s.",
+	    cid$orig_h, cid$orig_p, cid$resp_h, cid$resp_p, stats$bytes_from_1 +
+	    stats$bytes_from_2, stats$packets_from_1 + stats$packets_from_2,
+	    stats$timestamp);
+	}
+
+event XDP::ShuntConnID::shunted_conn(cid: conn_id)
+	{
+	print fmt("Shunted connection from %s:%d<->%s:%d", cid$orig_h, cid$orig_p,
+	    cid$resp_h, cid$resp_p);
 	}
 
 event ssl_established(c: connection)
 	{
-	print "Shunting", c$id;
 	XDP::ShuntConnID::shunt(xdp_prog, c$id);
 	}
 
@@ -77,19 +84,25 @@ event zeek_init()
 
 event XDP::ShuntIPPair::first_fin(pair: XDP::ip_pair)
 	{
-	local stats = XDP::ShuntIPPair::unshunt(xdp_prog, pair$ip1, pair$ip2);
-	if ( stats$present )
-		{
-		print fmt("Unshunted connection from %s->%s. Transmitted %d bytes and %d packets. Last packet was at %s.",
-		    pair$ip1, pair$ip2, stats$bytes_from_1 +
-		    stats$bytes_from_2, stats$packets_from_1 +
-		    stats$packets_from_2, stats$timestamp);
-		}
+	XDP::ShuntIPPair::unshunt(xdp_prog, pair$ip1, pair$ip2);
+	}
+
+event XDP::ShuntIPPair::unshunted_pair(ip1: addr, ip2: addr,
+    stats: XDP::ShuntedStats)
+	{
+	assert stats$present;
+	print fmt("Unshunted connection from %s<->%s. Transmitted %d bytes and %d packets. Last packet was at %s.",
+	    ip1, ip2, stats$bytes_from_1 + stats$bytes_from_2,
+	    stats$packets_from_1 + stats$packets_from_2, stats$timestamp);
+	}
+
+event XDP::ShuntIPPair::shunted_pair(ip1: addr, ip2: addr)
+	{
+	print fmt("Shunted connection from %s<->%s", ip1, ip2);
 	}
 
 event ssl_established(c: connection)
 	{
-	print "Shunting", c$id;
 	XDP::ShuntIPPair::shunt(xdp_prog, c$id$orig_h, c$id$resp_h);
 	}
 
