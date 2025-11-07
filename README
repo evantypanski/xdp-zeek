@@ -5,7 +5,7 @@ Uses XDP in order to "shunt" traffic - that way, Zeek doesn't waste its time ana
 You can use the provided configuration that is similar in functionality to [bro-react](https://github.com/JustinAzoff/bro-react):
 
 ```
-@load xdp/bulk
+@load xdp/shunt/bulk
 ```
 
 This provides a few configuration knobs, but it should shunt connections that are deemed "too large" and unshunt it when a certain time elapses without a packet or a FIN/RST packet is seen.
@@ -15,9 +15,8 @@ This provides a few configuration knobs, but it should shunt connections that ar
 You may also choose to manually shunt connections based on your own criteria. You can use the provided BIFs for that. For example, this shunts encrypted sessions, then unshunts when it sees a FIN/RST TCP packet:
 
 ```
-
 @load xdp
-@load xdp/conn_id
+@load xdp/shunt/conn_id
 
 global xdp_prog: opaque of XDP::Program;
 
@@ -31,12 +30,12 @@ event zeek_init()
 	xdp_prog = XDP::start_shunt(opts);
 	}
 
-event XDP::ShuntConnID::first_fin(cid: conn_id)
+event XDP::Shunt::ConnID::first_fin(cid: conn_id)
 	{
-	XDP::ShuntConnID::unshunt(xdp_prog, cid);
+	XDP::Shunt::ConnID::unshunt(xdp_prog, cid);
 	}
 
-event XDP::ShuntConnID::unshunted_conn(cid: conn_id, stats: XDP::ShuntedStats)
+event XDP::Shunt::ConnID::unshunted_conn(cid: conn_id, stats: XDP::ShuntedStats)
 	{
 	assert stats$present;
 	print fmt("Unshunted connection from %s:%d<->%s:%d. Transmitted %d bytes and %d packets. Last packet was at %s.",
@@ -45,7 +44,7 @@ event XDP::ShuntConnID::unshunted_conn(cid: conn_id, stats: XDP::ShuntedStats)
 	    stats$timestamp);
 	}
 
-event XDP::ShuntConnID::shunted_conn(cid: conn_id)
+event XDP::Shunt::ConnID::shunted_conn(cid: conn_id)
 	{
 	print fmt("Shunted connection from %s:%d<->%s:%d", cid$orig_h, cid$orig_p,
 	    cid$resp_h, cid$resp_p);
@@ -53,7 +52,7 @@ event XDP::ShuntConnID::shunted_conn(cid: conn_id)
 
 event ssl_established(c: connection)
 	{
-	XDP::ShuntConnID::shunt(xdp_prog, c$id);
+	XDP::Shunt::ConnID::shunt(xdp_prog, c$id);
 	}
 
 event zeek_done()
@@ -68,7 +67,7 @@ Shunting with IP pairs is similar:
 
 ```
 @load xdp
-@load xdp/ip_pair
+@load xdp/shunt/ip_pair
 
 global xdp_prog: opaque of XDP::Program;
 
@@ -82,12 +81,12 @@ event zeek_init()
 	xdp_prog = XDP::start_shunt(opts);
 	}
 
-event XDP::ShuntIPPair::first_fin(pair: XDP::ip_pair)
+event XDP::Shunt::IPPair::first_fin(pair: XDP::ip_pair)
 	{
-	XDP::ShuntIPPair::unshunt(xdp_prog, pair$ip1, pair$ip2);
+	XDP::Shunt::IPPair::unshunt(xdp_prog, pair$ip1, pair$ip2);
 	}
 
-event XDP::ShuntIPPair::unshunted_pair(ip1: addr, ip2: addr,
+event XDP::Shunt::IPPair::unshunted_pair(ip1: addr, ip2: addr,
     stats: XDP::ShuntedStats)
 	{
 	assert stats$present;
@@ -96,14 +95,14 @@ event XDP::ShuntIPPair::unshunted_pair(ip1: addr, ip2: addr,
 	    stats$packets_from_1 + stats$packets_from_2, stats$timestamp);
 	}
 
-event XDP::ShuntIPPair::shunted_pair(ip1: addr, ip2: addr)
+event XDP::Shunt::IPPair::shunted_pair(ip1: addr, ip2: addr)
 	{
 	print fmt("Shunted connection from %s<->%s", ip1, ip2);
 	}
 
 event ssl_established(c: connection)
 	{
-	XDP::ShuntIPPair::shunt(xdp_prog, c$id$orig_h, c$id$resp_h);
+	XDP::Shunt::IPPair::shunt(xdp_prog, c$id$orig_h, c$id$resp_h);
 	}
 
 event zeek_done()
