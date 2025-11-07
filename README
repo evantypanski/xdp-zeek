@@ -8,7 +8,9 @@ You can use the provided configuration that is similar in functionality to [bro-
 @load xdp/shunt/bulk
 ```
 
-This provides a few configuration knobs, but it should shunt connections that are deemed "too large" and unshunt it when a certain time elapses without a packet or a FIN/RST packet is seen.
+This provides a few configuration knobs, but it should shunt connections that are deemed "too large" and unshunt it when a certain time elapses without the connection terminating.
+
+The XDP program will still forward certain TCP packets, namely FIN, RST, SYN, and ACK packets. This way, Zeek can tell when a connection is complete and properly terminate it.
 
 ## Manual Shunting
 
@@ -30,9 +32,9 @@ event zeek_init()
 	xdp_prog = XDP::start_shunt(opts);
 	}
 
-event XDP::Shunt::ConnID::first_fin(cid: conn_id)
+event connection_state_remove(c: connection)
 	{
-	XDP::Shunt::ConnID::unshunt(xdp_prog, cid);
+	XDP::Shunt::ConnID::unshunt(xdp_prog, c$id);
 	}
 
 event XDP::Shunt::ConnID::unshunted_conn(cid: conn_id, stats: XDP::ShuntedStats)
@@ -81,9 +83,9 @@ event zeek_init()
 	xdp_prog = XDP::start_shunt(opts);
 	}
 
-event XDP::Shunt::IPPair::first_fin(pair: XDP::ip_pair)
+event connection_state_remove(c: connection)
 	{
-	XDP::Shunt::IPPair::unshunt(xdp_prog, pair$ip1, pair$ip2);
+	XDP::Shunt::IPPair::unshunt(xdp_prog, c$id$orig_h, c$id$resp_h);
 	}
 
 event XDP::Shunt::IPPair::unshunted_pair(ip1: addr, ip2: addr,
