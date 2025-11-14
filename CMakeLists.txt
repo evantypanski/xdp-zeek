@@ -47,6 +47,7 @@ add_custom_command(
     COMMAND ${CLANG_EXECUTABLE}
         -g -O2
         -target bpf
+        -D__BPF_BUILD__
         -c ${BPF_SOURCE}
         -o ${BPF_OBJECT}
     DEPENDS ${BPF_SOURCE}
