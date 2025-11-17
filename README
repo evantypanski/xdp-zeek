@@ -85,26 +85,26 @@ event zeek_init()
 
 event connection_state_remove(c: connection)
 	{
-	XDP::Shunt::IPPair::unshunt(xdp_prog, c$id$orig_h, c$id$resp_h);
+	XDP::Shunt::IPPair::unshunt(xdp_prog, [ $ip1=c$id$orig_h, $ip2=c$id$resp_h ]);
 	}
 
-event XDP::Shunt::IPPair::unshunted_pair(ip1: addr, ip2: addr,
+event XDP::Shunt::IPPair::unshunted_pair(pair: XDP::ip_pair,
     stats: XDP::ShuntedStats)
 	{
 	assert stats$present;
 	print fmt("Unshunted connection from %s<->%s. Transmitted %d bytes and %d packets. Last packet was at %s.",
-	    ip1, ip2, stats$bytes_from_1 + stats$bytes_from_2,
+	    pair$ip1, pair$ip2, stats$bytes_from_1 + stats$bytes_from_2,
 	    stats$packets_from_1 + stats$packets_from_2, stats$timestamp);
 	}
 
-event XDP::Shunt::IPPair::shunted_pair(ip1: addr, ip2: addr)
+event XDP::Shunt::IPPair::shunted_pair(pair: XDP::ip_pair)
 	{
-	print fmt("Shunted connection from %s<->%s", ip1, ip2);
+	print fmt("Shunted connection from %s<->%s", pair$ip1, pair$ip2);
 	}
 
 event ssl_established(c: connection)
 	{
-	XDP::Shunt::IPPair::shunt(xdp_prog, c$id$orig_h, c$id$resp_h);
+	XDP::Shunt::IPPair::shunt(xdp_prog, [ $ip1=c$id$orig_h, $ip2=c$id$resp_h ]);
 	}
 
 event zeek_done()
