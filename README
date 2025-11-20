@@ -124,6 +124,63 @@ Any shunted connections keep state about certain statistics, such as the last pa
 
 Shunting may raise some Zeek events, namely for FIN and RST TCP packets. This is done via BPF ring buffers.
 
+## VLANs
+
+By default, the XDP program will parse only a static number of VLAN headers, defined within the file. This should be adequate for most use cases. It will always parse the VLAN headers, but it will only use them if set with the `include_vlan` config option, like so:
+
+```
+event zeek_init()
+	{
+	local opts: XDP::ShuntOptions = [
+		$attach_mode=XDP::SKB,
+		$conn_id_map_max_size=131072,
+		$ip_pair_map_max_size=1,
+		$include_vlan=T, # Added this!
+	];
+	xdp_prog = XDP::start_shunt(opts);
+	}
+```
+
+Then, the "canonical" ID does not add the VLAN by default, so the user has to add it. You can ask Zeek to bring the VLANs in the `conn_id` by loading a policy script:
+
+```
+@load policy/frameworks/conn_key/vlan_fivetuple
+```
+
+Then add the information to the canonical ID when shunting and unshunting:
+
+```
+event connection_state_remove(c: connection)
+	{
+	local new_id = XDP::conn_id_to_canonical(c$id);
+
+	if ( c$id$ctx?$vlan )
+		new_id$outer_vlan_id = c$id$ctx$vlan;
+
+	if ( c$id$ctx?$inner_vlan )
+		new_id$inner_vlan_id = c$id$ctx$inner_vlan;
+
+	XDP::Shunt::ConnID::unshunt(xdp_prog, new_id);
+	}
+
+# ...
+
+event ssl_established(c: connection)
+	{
+	local new_id = XDP::conn_id_to_canonical(c$id);
+
+	if ( c$id$ctx?$vlan )
+		new_id$outer_vlan_id = c$id$ctx$vlan;
+
+	if ( c$id$ctx?$inner_vlan )
+		new_id$inner_vlan_id = c$id$ctx$inner_vlan;
+
+	XDP::Shunt::ConnID::shunt(xdp_prog, new_id);
+	}
+```
+
+A VLAN of 0 is considered the same as a VLAN with no ID for the purposes of shunting.
+
 ## TODOs
 
 - Add (better) way to filter the returned maps before converting to Zeek vals
