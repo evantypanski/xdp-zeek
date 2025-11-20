@@ -114,16 +114,6 @@ event zeek_done()
 	}
 ```
 
-## Internals
-
-This plugin uses XDP (eXpress Data Path) in order to filter traffic before it reaches user applications, like Zeek. This is filtering purely on the network device that Zeek sees traffic from.
-
-The XDP program itself simply checks if a certain IP pair or 5-tuple are in the "shunting map." This map is managed entirely from user space, that is, the Zeek program.
-
-Any shunted connections keep state about certain statistics, such as the last packet seen and how many bytes/packets were seen from each direction. This may help the user determine how effective the shunting was, or simply unshunt connections after a certain time elapsed without any traffic.
-
-Shunting may raise some Zeek events, namely for FIN and RST TCP packets. This is done via BPF ring buffers.
-
 ## VLANs
 
 By default, the XDP program will parse only a static number of VLAN headers, defined within the file. This should be adequate for most use cases. It will always parse the VLAN headers, but it will only use them if set with the `include_vlan` config option, like so:
@@ -181,8 +171,12 @@ event ssl_established(c: connection)
 
 A VLAN of 0 is considered the same as a VLAN with no ID for the purposes of shunting.
 
-## TODOs
+## Internals
 
-- Add (better) way to filter the returned maps before converting to Zeek vals
-- Potentially split the IP pair and conn id shunting in different XDP programs
-- Test it
+This plugin uses XDP (eXpress Data Path) in order to filter traffic before it reaches user applications, like Zeek. This is filtering purely on the network device that Zeek sees traffic from.
+
+The XDP program itself simply checks if a certain IP pair or 5-tuple are in the "shunting map." This map is managed entirely from user space, that is, the Zeek program. You may also, optionally, make it VLAN-aware (see above).
+
+Any shunted connections keep state about certain statistics, such as the last packet seen and how many bytes/packets were seen from each direction. This may help the user determine how effective the shunting was, or simply unshunt connections after a certain time elapsed without any traffic.
+
+TCP control packets, like FIN and RST, are forwarded to Zeek regardless of content. This allows Zeek to determine that the connection was terminated by a FIN or RST rather than by timeout.
