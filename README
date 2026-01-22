@@ -14,7 +14,17 @@ The XDP program will still forward certain TCP packets, namely FIN, RST, SYN, an
 
 ## Manual Shunting
 
-You may also choose to manually shunt connections based on your own criteria. You can use the provided BIFs for that. For example, this shunts encrypted sessions, then unshunts when it sees a FIN/RST TCP packet:
+You may also choose to manually shunt connections based on your own criteria. You can use the provided BIFs for that.
+
+### Attaching to existing XDP programs
+
+In a Zeek cluster (and many environments), the preferred approach is for Zeek to know nothing about XDP, but just add and remove flows/pairs to a map. The following examples give info on how to start and stop the program for shunting, but in a cluster it may be better to reuse the same map for all, and to have an external program manage the XDP logic. This way, if a node crashes, it will keep it's shunting map, and the Zeek processes don't need to worry about stopping the shunt.
+
+For this, see the provided `reconnect` instead of `start_shunt`. Then, if you need to stop adding and removing from the map, use `disconnect`. This does not do much, since the XDP program remains the same. All you need to do is connect to the pinned maps.
+
+### Flow-based shunting
+
+This shunts encrypted sessions, then unshunts when it sees a FIN/RST TCP packet:
 
 ```
 @load xdp
