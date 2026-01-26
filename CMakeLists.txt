@@ -37,22 +37,47 @@ set(BPF_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/src/bpf/filter.c")
 set(BPF_OBJECT "${CMAKE_CURRENT_BINARY_DIR}/bpf/filter.o")
 set(BPF_SKELETON "${CMAKE_CURRENT_BINARY_DIR}/bpf/filter.skel.h")
 
-find_program(CLANG_EXECUTABLE clang REQUIRED)
+find_program(CLANG_EXECUTABLE clang)
+find_program(BPF_GCC_EXECUTABLE bpf-gcc)
 find_program(BPFTOOL_EXECUTABLE bpftool REQUIRED)
+
+if ( NOT CLANG_EXECUTABLE AND NOT BPF_GCC_EXECUTABLE )
+   message(FATAL_ERROR "clang or bpf-gcc are required to be in your PATH to build this plugin")
+endif ()
 
 file(MAKE_DIRECTORY ${BPF_OUTPUT_DIR})
 
-add_custom_command(
-    OUTPUT ${BPF_OBJECT}
-    COMMAND ${CLANG_EXECUTABLE}
-        -g -O2
-        -target bpf
-        -D__BPF_BUILD__
-        -c ${BPF_SOURCE}
-        -o ${BPF_OBJECT}
-    DEPENDS ${BPF_SOURCE}
-    COMMENT "Compiling BPF code ${BPF_SOURCE}"
-)
+# Build the bpf object with either clang or bpf-gcc. LLVM appears
+# to be the preferred method to the documentation, but bpf-gcc should
+# work also.
+
+if ( CLANG_EXECUTABLE )
+    message(STATUS "Compiling bpf filter with clang")
+    add_custom_command(
+        OUTPUT ${BPF_OBJECT}
+        COMMAND ${CLANG_EXECUTABLE}
+            -g -O2
+            -target bpf
+            -D__BPF_BUILD__
+            -c ${BPF_SOURCE}
+            -o ${BPF_OBJECT}
+        DEPENDS ${BPF_SOURCE}
+        COMMENT "Compiling BPF code ${BPF_SOURCE}"
+    )
+elseif ( BPF_GCC_EXECUTABLE )
+    message(STATUS "Compiling bpf filter with bpf-gcc")
+    add_custom_command(
+        OUTPUT ${BPF_OBJECT}
+        COMMAND ${BPF_GCC_EXECUTABLE}
+            -gbtf -O2
+            -D__BPF_BUILD__
+            -I/usr/include
+            -c ${BPF_SOURCE}
+            -o ${BPF_OBJECT}
+        DEPENDS ${BPF_SOURCE}
+        COMMENT "Compiling BPF code ${BPF_SOURCE}"
+    )
+endif ()
 
 add_custom_command(
     OUTPUT ${BPF_SKELETON}
