@@ -38,7 +38,7 @@ set(BPF_OBJECT "${CMAKE_CURRENT_BINARY_DIR}/bpf/filter.o")
 set(BPF_SKELETON "${CMAKE_CURRENT_BINARY_DIR}/bpf/filter.skel.h")
 
 find_program(CLANG_EXECUTABLE clang)
-find_program(BPF_GCC_EXECUTABLE bpf-gcc)
+find_program(BPF_GCC_EXECUTABLE NAMES bpf-gcc bpf-unknown-none-gcc)
 find_program(BPFTOOL_EXECUTABLE bpftool REQUIRED)
 
 if ( NOT CLANG_EXECUTABLE AND NOT BPF_GCC_EXECUTABLE )
@@ -69,6 +69,7 @@ elseif ( BPF_GCC_EXECUTABLE )
     add_custom_command(
         OUTPUT ${BPF_OBJECT}
         COMMAND ${BPF_GCC_EXECUTABLE}
+            -std=gnu11
             -gbtf -O2
             -D__BPF_BUILD__
             -I/usr/include
