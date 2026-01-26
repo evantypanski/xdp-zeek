@@ -190,3 +190,54 @@ The XDP program itself simply checks if a certain IP pair or 5-tuple are in the 
 Any shunted connections keep state about certain statistics, such as the last packet seen and how many bytes/packets were seen from each direction. This may help the user determine how effective the shunting was, or simply unshunt connections after a certain time elapsed without any traffic.
 
 TCP control packets, like FIN and RST, are forwarded to Zeek regardless of content. This allows Zeek to determine that the connection was terminated by a FIN or RST rather than by timeout.
+
+Here is a diagram, with some parts slightly simplified:
+
+```mermaid
+
+flowchart TD
+    subgraph driver
+        stuff
+        XDP
+    end
+
+    subgraph Zeek
+        direction LR
+        subgraph ssl
+            direction TB
+            established["<code>event ssl_established</code"] -->
+            shunt-ssl["<code>shunt(conn_id)</code>"]
+        end
+        subgraph bulk
+            direction TB
+            newconn["<code>event new_connection</code>"] -->
+            watch["<code>ConnPolling::watch(conn_callback, ...)</code>"] -->
+            callback["<code>function conn_callback(c: connection)</code>"] -->
+            size_check["<code>if ( c$orig$size > size_threshold || c$resp$size > size_threshold )</code>"] -->
+            shunt-bulk["<code>shunt(c$id);</code>"]
+        end
+    end
+
+    subgraph kernel    
+        subgraph bpf[BPF map]
+            filter_map
+            ip_pair_map
+        end
+        
+        network-stack["network stack"]
+    end
+
+    NIC --> XDP
+    XDP -- "3. (if in map) XDP_DROP" --> trash[(trash)]
+    XDP -- "3. (if not in map) XDP_PASS" --> stuff
+    stuff --> network-stack --> Zeek
+
+    XDP -- "1. Lookup" --> bpf
+    bpf -- "2. Provide stats" --> XDP
+
+    shunt-ssl --> add:::hidden
+    shunt-bulk --> add:::hidden
+    add -- "Add to map" --> bpf
+
+    NIC 
+```
