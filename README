@@ -51,10 +51,12 @@ event XDP::Shunt::ConnID::unshunted_conn(cid: XDP::canonical_id,
     stats: XDP::ShuntedStats)
 	{
 	assert stats$present;
-	print fmt("Unshunted connection from %s:%d<->%s:%d. Transmitted %d bytes and %d packets. Last packet was at %s.",
+	print fmt("Unshunted connection from %s:%d<->%s:%d. Transmitted %d bytes and %d packets.",
 	    cid$ip1, cid$ip1_port, cid$ip2, cid$ip2_port, stats$bytes_from_1 +
-	    stats$bytes_from_2, stats$packets_from_1 + stats$packets_from_2,
-	    stats$timestamp);
+	    stats$bytes_from_2, stats$packets_from_1 + stats$packets_from_2);
+
+	if ( stats?$timestamp )
+		print fmt("Last packet was at %s.", stats$timestamp);
 	}
 
 event XDP::Shunt::ConnID::shunted_conn(cid: XDP::canonical_id)
@@ -103,9 +105,12 @@ event XDP::Shunt::IPPair::unshunted_pair(pair: XDP::ip_pair,
     stats: XDP::ShuntedStats)
 	{
 	assert stats$present;
-	print fmt("Unshunted connection from %s<->%s. Transmitted %d bytes and %d packets. Last packet was at %s.",
+	print fmt("Unshunted connection from %s<->%s. Transmitted %d bytes and %d packets.",
 	    pair$ip1, pair$ip2, stats$bytes_from_1 + stats$bytes_from_2,
-	    stats$packets_from_1 + stats$packets_from_2, stats$timestamp);
+	    stats$packets_from_1 + stats$packets_from_2);
+
+	if ( stats?$timestamp )
+		print fmt("Last packet was at %s.", stats$timestamp);
 	}
 
 event XDP::Shunt::IPPair::shunted_pair(pair: XDP::ip_pair)
