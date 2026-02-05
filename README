@@ -24,11 +24,14 @@ For this, see the provided `reconnect` instead of `start_shunt`. Then, if you ne
 
 ### Flow-based shunting
 
-This shunts encrypted sessions, then unshunts when it sees a FIN/RST TCP packet:
+This shunts encrypted sessions, then unshunts when it is inactive for a default amount of time:
 
 ```
 @load xdp
 @load xdp/shunt/conn_id
+
+# Tells the shunter to automatically schedule garbage collection
+redef XDP::Shunt::ConnID::enable_gc = T;
 
 event zeek_init()
 	{
@@ -39,11 +42,6 @@ event zeek_init()
 	];
 
 	XDP::start_shunt(opts);
-	}
-
-event connection_state_remove(c: connection)
-	{
-	XDP::Shunt::ConnID::unshunt(XDP::conn_id_to_canonical(c$id));
 	}
 
 event XDP::Shunt::ConnID::unshunted_conn(cid: XDP::canonical_id,
@@ -66,6 +64,8 @@ event XDP::Shunt::ConnID::shunted_conn(cid: XDP::canonical_id)
 
 event ssl_established(c: connection)
 	{
+	# Tell Zeek not to timeout this connection, the garbage collector will
+	set_inactivity_timeout(c$id, 0sec);
 	XDP::Shunt::ConnID::shunt(XDP::conn_id_to_canonical(c$id));
 	}
 
@@ -74,6 +74,8 @@ event zeek_done()
 	XDP::end_shunt();
 	}
 ```
+
+The flow-based shunting relies on garbage collection (timeouts) to unshunt connections in order to keep Zeek in charge of unshunting. This requires explicitly enabling garbage collection when needed. Any entries that haven't had a packet in the timeout interval will get unshunted. You may still manually unshunt connections, or trigger the garbage collection manually. See the `collect_garbage` event for more information.
 
 ### IP Pairs
 
