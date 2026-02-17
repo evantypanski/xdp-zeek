@@ -30,8 +30,6 @@ This shunts encrypted sessions, then unshunts when it sees a FIN/RST TCP packet:
 @load xdp
 @load xdp/shunt/conn_id
 
-global xdp_prog: opaque of XDP::Program;
-
 event zeek_init()
 	{
 	local opts: XDP::ShuntOptions = [
@@ -39,12 +37,13 @@ event zeek_init()
 		$conn_id_map_max_size=131072, # A bit over the max number of shunted connections
 		$ip_pair_map_max_size=1, # We can't remove the map, so make it very small
 	];
-	xdp_prog = XDP::start_shunt(opts);
+
+	XDP::start_shunt(opts);
 	}
 
 event connection_state_remove(c: connection)
 	{
-	XDP::Shunt::ConnID::unshunt(xdp_prog, XDP::conn_id_to_canonical(c$id));
+	XDP::Shunt::ConnID::unshunt(XDP::conn_id_to_canonical(c$id));
 	}
 
 event XDP::Shunt::ConnID::unshunted_conn(cid: XDP::canonical_id,
@@ -67,12 +66,12 @@ event XDP::Shunt::ConnID::shunted_conn(cid: XDP::canonical_id)
 
 event ssl_established(c: connection)
 	{
-	XDP::Shunt::ConnID::shunt(xdp_prog, XDP::conn_id_to_canonical(c$id));
+	XDP::Shunt::ConnID::shunt(XDP::conn_id_to_canonical(c$id));
 	}
 
 event zeek_done()
 	{
-	XDP::end_shunt(xdp_prog);
+	XDP::end_shunt();
 	}
 ```
 
@@ -84,8 +83,6 @@ Shunting with IP pairs is similar:
 @load xdp
 @load xdp/shunt/ip_pair
 
-global xdp_prog: opaque of XDP::Program;
-
 event zeek_init()
 	{
 	local opts: XDP::ShuntOptions = [
@@ -93,12 +90,13 @@ event zeek_init()
 		$conn_id_map_max_size=1, # We can't remove the map, so make it very small
 		$ip_pair_map_max_size=131072, # A bit over the max number of shunted connections
 	];
-	xdp_prog = XDP::start_shunt(opts);
+
+	XDP::start_shunt(opts);
 	}
 
 event connection_state_remove(c: connection)
 	{
-	XDP::Shunt::IPPair::unshunt(xdp_prog, [ $ip1=c$id$orig_h, $ip2=c$id$resp_h ]);
+	XDP::Shunt::IPPair::unshunt([ $ip1=c$id$orig_h, $ip2=c$id$resp_h ]);
 	}
 
 event XDP::Shunt::IPPair::unshunted_pair(pair: XDP::ip_pair,
@@ -120,12 +118,12 @@ event XDP::Shunt::IPPair::shunted_pair(pair: XDP::ip_pair)
 
 event ssl_established(c: connection)
 	{
-	XDP::Shunt::IPPair::shunt(xdp_prog, [ $ip1=c$id$orig_h, $ip2=c$id$resp_h ]);
+	XDP::Shunt::IPPair::shunt([ $ip1=c$id$orig_h, $ip2=c$id$resp_h ]);
 	}
 
 event zeek_done()
 	{
-	XDP::end_shunt(xdp_prog);
+	XDP::end_shunt();
 	}
 ```
 
