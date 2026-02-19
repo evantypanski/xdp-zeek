@@ -13,7 +13,7 @@ zeek_plugin_begin(XDP Shunter ${ZEEK_PLUGIN_BEGIN_OPTS})
 zeek_plugin_cc(src/Plugin.cc src/XDPProgram.cc src/ShuntUtil.cc src/bpf/UserXDP.cc)
 zeek_plugin_bif(src/shunter.bif src/ip_pair_shunter.bif src/conn_id_shunter.bif)
 zeek_plugin_dist_files(README CHANGES COPYING VERSION)
-zeek_plugin_scripts(scripts/__load__.zeek scripts/__preload__.zeek scripts/types.zeek scripts/xdp/main.zeek
+zeek_plugin_scripts(scripts/__load__.zeek scripts/__preload__.zeek scripts/types.zeek scripts/xdp/main.zeek scripts/xdp/connect.zeek scripts/xdp/__load__.zeek
                     scripts/xdp/shunt/conn_id/__load__.zeek scripts/xdp/shunt/conn_id/main.zeek
                     scripts/xdp/shunt/ip_pair/__load__.zeek scripts/xdp/shunt/ip_pair/main.zeek
                     scripts/xdp/shunt/bulk/__load__.zeek scripts/xdp/shunt/bulk/main.zeek)
