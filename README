@@ -28,18 +28,9 @@ This shunts encrypted sessions, then unshunts when it is inactive for a default 
 
 ```
 @load xdp
-@load xdp/shunt/conn_id
 
-event zeek_init()
-	{
-	local opts: XDP::ShuntOptions = [
-		$attach_mode=XDP::SKB, # SKB is more for testing, NATIVE is better
-		$conn_id_map_max_size=131072, # A bit over the max number of shunted connections
-		$ip_pair_map_max_size=1, # We can't remove the map, so make it very small
-	];
-
-	XDP::start_shunt(opts);
-	}
+# Tell Zeek to start a new XDP program, not reconnect
+redef XDP::start_new_xdp = T;
 
 event XDP::Shunt::ConnID::unshunted_conn(cid: XDP::canonical_id,
     stats: XDP::ShuntedStats)
@@ -78,23 +69,9 @@ Shunting with IP pairs is similar:
 
 ```
 @load xdp
-@load xdp/shunt/ip_pair
 
-event zeek_init()
-	{
-	local opts: XDP::ShuntOptions = [
-		$attach_mode=XDP::SKB, # SKB is more for testing, NATIVE is better
-		$conn_id_map_max_size=1, # We can't remove the map, so make it very small
-		$ip_pair_map_max_size=131072, # A bit over the max number of shunted connections
-	];
-
-	XDP::start_shunt(opts);
-	}
-
-event connection_state_remove(c: connection)
-	{
-	XDP::Shunt::IPPair::unshunt([ $ip1=c$id$orig_h, $ip2=c$id$resp_h ]);
-	}
+# Tell Zeek to start a new XDP program, not reconnect
+redef XDP::start_new_xdp = T;
 
 event XDP::Shunt::IPPair::unshunted_pair(pair: XDP::ip_pair,
     stats: XDP::ShuntedStats)
@@ -118,27 +95,28 @@ event ssl_established(c: connection)
 	XDP::Shunt::IPPair::shunt([ $ip1=c$id$orig_h, $ip2=c$id$resp_h ]);
 	}
 
+# IP pairs do not normally unshunt on connection remove, but we will here for
+# demonstration. Note that conn_id has special handling to remove only after
+# a given time, but this will not do so.
+event connection_state_remove(c: connection)
+	{
+	XDP::Shunt::IPPair::unshunt([ $ip1=c$id$orig_h, $ip2=c$id$resp_h ]);
+	}
+
 event zeek_done()
 	{
 	XDP::end_shunt();
 	}
 ```
 
+IP pairs will not log to the same log, since unshunting an IP pair is a different idea from shunting a particular connection. You may add your own log if you choose.
+
 ## VLANs
 
 By default, the XDP program will parse only a static number of VLAN headers, defined within the file. This should be adequate for most use cases. It will always parse the VLAN headers, but it will only use them if set with the `include_vlan` config option, like so:
 
 ```
-event zeek_init()
-	{
-	local opts: XDP::ShuntOptions = [
-		$attach_mode=XDP::SKB,
-		$conn_id_map_max_size=131072,
-		$ip_pair_map_max_size=1,
-		$include_vlan=T, # Added this!
-	];
-	xdp_prog = XDP::start_shunt(opts);
-	}
+redef XDP::include_vlan = T;
 ```
 
 Then, the "canonical" ID does not add the VLAN by default, so the user has to add it. You can ask Zeek to bring the VLANs in the `conn_id` by loading a policy script:
@@ -160,7 +138,7 @@ event connection_state_remove(c: connection)
 	if ( c$id$ctx?$inner_vlan )
 		new_id$inner_vlan_id = c$id$ctx$inner_vlan;
 
-	XDP::Shunt::ConnID::unshunt(xdp_prog, new_id);
+	XDP::Shunt::ConnID::unshunt(new_id);
 	}
 
 # ...
@@ -175,7 +153,7 @@ event ssl_established(c: connection)
 	if ( c$id$ctx?$inner_vlan )
 		new_id$inner_vlan_id = c$id$ctx$inner_vlan;
 
-	XDP::Shunt::ConnID::shunt(xdp_prog, new_id);
+	XDP::Shunt::ConnID::shunt(new_id);
 	}
 ```
 
