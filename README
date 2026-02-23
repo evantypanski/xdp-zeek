@@ -1,26 +1,38 @@
 # Zeek XDP Filtering
 
+> [!NOTE]
+> This plugin uses features that are not yet in a Zeek release. Currently the `zeekctl` support is in progress in [a branch](https://github.com/zeek/zeekctl/tree/topic/etyp/xdp). Be sure to use current Zeek master and that branch of `zeekctl` in order to use this plugin.
+
 Uses XDP in order to "shunt" traffic - that way, Zeek doesn't waste its time analyzing packets that won't get any useful information.
 
-You can use the provided configuration that is similar in functionality to [bro-react](https://github.com/JustinAzoff/bro-react):
+The provided scripts do a lot of heavy lifting, with some configuration knobs for common patterns. If you just want to connect to a loaded XDP program with some simple shunting automatically done, just add this to `local.zeek` (or a test script):
 
 ```
-@load xdp/shunt/bulk
+@load xdp
+@load xdp/shunt/policy
 ```
 
-This provides a few configuration knobs, but it should shunt connections that are deemed "too large" and unshunt it when a certain time elapses without the connection terminating.
+This will connect to the loaded XDP program and shunt some traffic. Any shunted traffic will appear in `xdp_shunt.log` once it is unshunted (which is based on timeouts, so feedback may not be immediate). Use the `shunted_conn` event for more immediate feedback.
 
-The XDP program will still forward certain TCP packets, namely FIN, RST, SYN, and ACK packets. This way, Zeek can tell when a connection is complete and properly terminate it.
+Clusters need to load the XDP program before starting. To do so, simply add the XDP program path that should be loaded to the `zeekctl.cfg`, like:
+
+```
+XDPProgram = /home/etyp/src/zeek-xdp-shunter/build/bpf/filter.o
+```
+
+This will load the given XDP program on start and unload it on stop.
+
+If you want to just load the XDP program on a standalone instance, you can tell the shunter to do so:
+
+```
+redef XDP::start_new_xdp = T;
+```
+
+However, this might cause issues in clusters, where not every Zeek process is listening on an interface.
 
 ## Manual Shunting
 
-You may also choose to manually shunt connections based on your own criteria. You can use the provided BIFs for that.
-
-### Attaching to existing XDP programs
-
-In a Zeek cluster (and many environments), the preferred approach is for Zeek to know nothing about XDP, but just add and remove flows/pairs to a map. The following examples give info on how to start and stop the program for shunting, but in a cluster it may be better to reuse the same map for all, and to have an external program manage the XDP logic. This way, if a node crashes, it will keep it's shunting map, and the Zeek processes don't need to worry about stopping the shunt.
-
-For this, see the provided `reconnect` instead of `start_shunt`. Then, if you need to stop adding and removing from the map, use `disconnect`. This does not do much, since the XDP program remains the same. All you need to do is connect to the pinned maps.
+You may also choose to manually shunt connections based on your own criteria. You can use the provided functions for that.
 
 ### Flow-based shunting
 
@@ -50,6 +62,7 @@ event XDP::Shunt::ConnID::shunted_conn(cid: XDP::canonical_id)
 	    cid$ip2, cid$ip2_port);
 	}
 
+# This is exactly what is in the ssl.zeek shunting policy!
 event ssl_established(c: connection)
 	{
 	XDP::Shunt::ConnID::shunt(XDP::conn_id_to_canonical(c$id));
@@ -166,8 +179,6 @@ This plugin uses XDP (eXpress Data Path) in order to filter traffic before it re
 The XDP program itself simply checks if a certain IP pair or 5-tuple are in the "shunting map." This map is managed entirely from user space, that is, the Zeek program. You may also, optionally, make it VLAN-aware (see above).
 
 Any shunted connections keep state about certain statistics, such as the last packet seen and how many bytes/packets were seen from each direction. This may help the user determine how effective the shunting was, or simply unshunt connections after a certain time elapsed without any traffic.
-
-TCP control packets, like FIN and RST, are forwarded to Zeek regardless of content. This allows Zeek to determine that the connection was terminated by a FIN or RST rather than by timeout.
 
 Here is a diagram, with some parts slightly simplified:
 

@@ -16,7 +16,8 @@ zeek_plugin_dist_files(README CHANGES COPYING VERSION)
 zeek_plugin_scripts(scripts/__load__.zeek scripts/__preload__.zeek scripts/types.zeek scripts/xdp/main.zeek scripts/xdp/connect.zeek scripts/xdp/__load__.zeek
                     scripts/xdp/shunt/conn_id/__load__.zeek scripts/xdp/shunt/conn_id/main.zeek scripts/xdp/shunt/conn_id/log.zeek
                     scripts/xdp/shunt/ip_pair/__load__.zeek scripts/xdp/shunt/ip_pair/main.zeek
-                    scripts/xdp/shunt/bulk/__load__.zeek scripts/xdp/shunt/bulk/main.zeek)
+                    scripts/xdp/shunt/policy/__load__.zeek scripts/xdp/shunt/policy/ssl.zeek scripts/xdp/shunt/policy/bulk.zeek
+                )
 zeek_plugin_end()
 
 file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" VERSION LIMIT_COUNT 1)
