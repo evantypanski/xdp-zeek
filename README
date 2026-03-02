@@ -64,7 +64,7 @@ event XDP::Shunt::ConnID::shunted_conn(cid: conn_id)
 # This is exactly what is in the ssl.zeek shunting policy!
 event ssl_established(c: connection)
 	{
-	XDP::Shunt::ConnID::shunt(c$id);
+	XDP::Shunt::ConnID::shunt(c);
 	}
 
 event zeek_done()
