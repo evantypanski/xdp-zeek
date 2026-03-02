@@ -135,6 +135,12 @@ With those fields in the `conn_id_ctx`, the XDP shunter will automatically const
 
 A VLAN of 0 is considered the same as a VLAN with no ID for the purposes of shunting.
 
+You can force not using VLANs, regardless of the conn_id_ctx, by setting:
+
+```
+redef XDP::force_no_vlans = T;
+```
+
 ## Internals
 
 This plugin uses XDP (eXpress Data Path) in order to filter traffic before it reaches user applications, like Zeek. This is filtering purely on the network device that Zeek sees traffic from.
