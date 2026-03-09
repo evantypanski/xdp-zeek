@@ -30,6 +30,20 @@ redef XDP::start_new_xdp = T;
 
 However, this might cause issues in clusters, where not every Zeek process is listening on an interface.
 
+## Building
+
+You may need a couple of packages in order to properly build the XDP/BPF programs. For example, on Ubuntu:
+
+```
+sudo apt install bpftool libxdp-dev clang
+```
+
+It might also be useful to have certain tools in order to load the programs and analyze them:
+
+```
+sudo apt install xdp-tools
+```
+
 ## Manual Shunting
 
 You may also choose to manually shunt connections based on your own criteria. You can use the provided functions for that.
