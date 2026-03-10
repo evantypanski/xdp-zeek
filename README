@@ -44,6 +44,24 @@ It might also be useful to have certain tools in order to load the programs and 
 sudo apt install xdp-tools
 ```
 
+> [!NOTE]
+> Loading an XDP program to the kernel is a privileged operation, so always expect to require root if loading. However, it's not necessary for *zeek* to load the XDP program (though it is possible). All Zeek needs is to access the BPF map.
+>
+> In order to achieve this, first you must still have `cap_net_raw` just to run Zeek (via `sudo setcap cap_not_raw+ep <zeekinstall>/bin/zeek`).
+>
+> Then, you may be able to just set permissions for maps via `chmod` after the XDP program has loaded with:
+>
+> ```
+> $ sudo chmod 755 /sys/fs/bpf
+> $ sudo xdp-loader load <interface> build/bpf/filter.o -p /sys/fs/bpf/zeek
+> $ sudo chmod 755 /sys/fs/bpf/zeek
+> $ sudo chmod 666 /sys/fs/bpf/zeek/*
+> ```
+>
+> However, since it's mounted, you may also need to remount with those permissions first with `sudo mount -o remount,mode=755 /sys/fs/bpf`.
+>
+> When using this non-root way, do not start the XDP shunter with `redef XDP::start_new_xdp = T`
+
 ## Manual Shunting
 
 You may also choose to manually shunt connections based on your own criteria. You can use the provided functions for that.
