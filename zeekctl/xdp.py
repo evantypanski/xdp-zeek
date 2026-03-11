@@ -1,4 +1,5 @@
 import ZeekControl.plugin
+import os
 
 
 class XDPZeek(ZeekControl.plugin.Plugin):
@@ -12,14 +13,19 @@ class XDPZeek(ZeekControl.plugin.Plugin):
         return 1
 
     def options(self):
+        plugin_dir = os.path.dirname(os.path.abspath(__file__))
+        default_path = os.path.join(plugin_dir, "..", "bpf", "filter.o")
+        default_path = os.path.normpath(default_path)
+
         return [
-            ("XDPProgram", "string", "", "The XDP program"),
-            ("XDPPinPath", "string", "", "The XDP pin path"),
+            ("enabled", "bool", False, "Set to enable plugin"),
+            ("Program", "string", default_path, "The XDP program"),
+            ("PinPath", "string", "/sys/fs/bpf/zeek/", "The XDP pin path"),
         ]
 
     def init(self):
-        xdp_program = self.getOption("XDPProgram")
-        xdp_pin_path = self.getOption("XDPPinPath")
+        xdp_program = self.getOption("Program")
+        xdp_pin_path = self.getOption("PinPath")
         if not xdp_program:
             return False
 
@@ -48,9 +54,9 @@ class XDPZeek(ZeekControl.plugin.Plugin):
                         "xdp-loader",
                         "load",
                         self.get_interface(node),
-                        self.getOption("XDPProgram"),
+                        self.getOption("Program"),
                         "-p",
-                        self.getOption("XDPPinPath"),
+                        self.getOption("PinPath"),
                     ]
                 ),
             )
