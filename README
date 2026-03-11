@@ -8,27 +8,39 @@ Uses XDP in order to "shunt" traffic - that way, Zeek doesn't waste its time ana
 The provided scripts do a lot of heavy lifting, with some configuration knobs for common patterns. If you just want to connect to a loaded XDP program with some simple shunting automatically done, just add this to `local.zeek` (or a test script):
 
 ```
+# local.zeek
 @load xdp
 @load xdp/shunt/policy
 ```
 
 This will connect to the loaded XDP program and shunt some traffic. Any shunted traffic will appear in `xdp_shunt.log` once it is unshunted (which is based on timeouts, so feedback may not be immediate). Use the `shunted_conn` event for more immediate feedback.
 
-Clusters need to load the XDP program before starting. To do so, simply add the XDP program path that should be loaded to the `zeekctl.cfg`, like:
+Clusters need to load the XDP program before starting. The XDP program should be magically found, but you must enable `zeekctl` loading the XDP plugin (in `zeekctl.cfg`):
 
 ```
-XDPProgram = /home/etyp/src/zeek-xdp-shunter/build/bpf/filter.o
+# zeekctl.cfg
+xdp.enabled = True
 ```
 
 This will load the given XDP program on start and unload it on stop.
 
-If you want to just load the XDP program on a standalone instance, you can tell the shunter to do so:
+To change the loaded XDP program, set the corresponding option in `zeekctl.cfg`. This may be necessary if the magic location does not work.
 
 ```
+# zeekctl.cfg
+xdp.Program = /home/etyp/src/zeek-xdp-shunter/build/bpf/filter.o
+```
+
+If you want to just load the XDP program on a standalone instance, you can tell the shunter to do so. This means that Zeek itself will load the program, so it must have necessary permissions. This option is primarily for testing. Just add this to the `local.zeek` file in order to tell Zeek to load the XDP program on init:
+
+```
+# local.zeek
 redef XDP::start_new_xdp = T;
 ```
 
 However, this might cause issues in clusters, where not every Zeek process is listening on an interface.
+
+For more complex environments, some combination of loading the XDP programs before with `xdp-loader` pinned at `/sys/fs/bpf/zeek` on each interface and simply loading with `@load xdp` should work.
 
 ## Building
 
