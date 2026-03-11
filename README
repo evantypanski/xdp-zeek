@@ -1,7 +1,7 @@
 # Zeek XDP Filtering
 
 > [!NOTE]
-> This plugin uses features that are not yet in a Zeek release. Currently the `zeekctl` support is in progress in [a branch](https://github.com/zeek/zeekctl/tree/topic/etyp/xdp). Be sure to use current Zeek master and that branch of `zeekctl` in order to use this plugin.
+> This plugin uses features that are not yet in a Zeek release. The `zeekctl` support is included in this directory. Since this is intended to make it into Zeek as well, it is also in [a branch](https://github.com/zeek/zeekctl/tree/topic/etyp/xdp). Do not use both `zeekctl` plugins at the same time.
 
 Uses XDP in order to "shunt" traffic - that way, Zeek doesn't waste its time analyzing packets that won't get any useful information.
 
