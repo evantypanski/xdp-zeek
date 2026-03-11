@@ -20,6 +20,26 @@ zeek_plugin_scripts(scripts/__load__.zeek scripts/__preload__.zeek scripts/types
                 )
 zeek_plugin_end()
 
+# Include filter.o. HACKY :)
+set(BPF_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/bpf")
+set(BPF_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/src/bpf/filter.c")
+set(BPF_OBJECT "${CMAKE_CURRENT_BINARY_DIR}/bpf/filter.o")
+set(BPF_SKELETON "${CMAKE_CURRENT_BINARY_DIR}/bpf/filter.skel.h")
+
+set(canon_name "XDP_Shunter")
+set(dist_tarball_dir ${CMAKE_CURRENT_BINARY_DIR}/dist/${canon_name})
+
+add_custom_command(
+    OUTPUT ${dist_tarball_dir}/bpf/filter.o
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${dist_tarball_dir}/bpf
+    COMMAND ${CMAKE_COMMAND} -E copy ${BPF_OBJECT} ${dist_tarball_dir}/bpf/filter.o
+    DEPENDS ${BPF_OBJECT}
+)
+
+add_custom_target(bpf_dist DEPENDS ${dist_tarball_dir}/bpf/filter.o)
+
+add_dependencies(${canon_name}_tarball bpf_dist)
+
 file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" VERSION LIMIT_COUNT 1)
 
 if ("${PROJECT_SOURCE_DIR}" STREQUAL "${CMAKE_SOURCE_DIR}")
@@ -32,11 +52,6 @@ target_link_libraries(XDP_Shunter PRIVATE
     PkgConfig::LIBXDP
     PkgConfig::LIBBPF
 )
-
-set(BPF_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/bpf")
-set(BPF_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/src/bpf/filter.c")
-set(BPF_OBJECT "${CMAKE_CURRENT_BINARY_DIR}/bpf/filter.o")
-set(BPF_SKELETON "${CMAKE_CURRENT_BINARY_DIR}/bpf/filter.skel.h")
 
 find_program(CLANG_EXECUTABLE clang)
 find_program(BPF_GCC_EXECUTABLE NAMES bpf-gcc bpf-unknown-none-gcc)
