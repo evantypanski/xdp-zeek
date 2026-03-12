@@ -21,6 +21,12 @@ class XDPZeek(ZeekControl.plugin.Plugin):
             ("enabled", "bool", False, "Set to enable plugin"),
             ("Program", "string", default_path, "The XDP program"),
             ("PinPath", "string", "/sys/fs/bpf/zeek/", "The XDP pin path"),
+            (
+                "AttachMode",
+                "string",
+                "unspecified",
+                "The XDP attach mode (native,skb,hw,unspecified)",
+            ),
         ]
 
     def init(self):
@@ -57,6 +63,8 @@ class XDPZeek(ZeekControl.plugin.Plugin):
                         self.getOption("Program"),
                         "-p",
                         self.getOption("PinPath"),
+                        "-m",
+                        self.getOption("AttachMode"),
                     ]
                 ),
             )
@@ -104,3 +112,21 @@ class XDPZeek(ZeekControl.plugin.Plugin):
                 )
 
         return nodes
+
+    def zeekctl_config(self):
+        # Since we assume that the program is loaded, no need to redef any options associated with
+        # loading the XDP program (attach mode, map sizes, etc.)
+        pin_path = self.getOption("PinPath")
+
+        script = "\n".join(
+            [
+                "# Enable XDP",
+                "@load xdp",
+                "",
+                "# Set XDP variables",
+                f'redef XDP::pin_path = "{pin_path}";',
+                "",
+            ]
+        )
+
+        return script
