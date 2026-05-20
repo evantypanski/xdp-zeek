@@ -1,5 +1,6 @@
+from pathlib import Path
+
 import ZeekControl.plugin
-import os
 
 
 class XDPZeek(ZeekControl.plugin.Plugin):
@@ -12,14 +13,45 @@ class XDPZeek(ZeekControl.plugin.Plugin):
     def pluginVersion(self):
         return 1
 
+    def makeLoadCommand(self, interface):
+        return " ".join(
+            [
+                self.getOption("XDPLoader"),
+                "--pin-path-prefix",
+                self.getOption("PinPath"),
+                "load",
+                "--obj",
+                self.getOption("Program"),
+                "--iface",
+                interface,
+                "-m",
+                self.getOption("AttachMode"),
+                "--flow-map-max-size",
+                str(self.getOption("FlowMapMaxSize")),
+                "--ip-pair-map-max-size",
+                str(self.getOption("IPPairMapMaxSize")),
+            ]
+        )
+
+    def makeUnloadCommand(self, interface):
+        return " ".join(
+            [
+                self.getOption("XDPLoader"),
+                "--pin-path-prefix",
+                self.getOption("PinPath"),
+                "unload",
+                "--iface",
+                interface,
+            ]
+        )
+
     def options(self):
-        plugin_dir = os.path.dirname(os.path.abspath(__file__))
-        default_path = os.path.join(plugin_dir, "..", "bpf", "filter.o")
-        default_path = os.path.normpath(default_path)
+        plugin_dir = self.getGlobalOption("PluginZeekDir")
+        default_path = Path(plugin_dir) / "xdp_shunt" / "bpf" / "filter.o"
 
         return [
             ("enabled", "bool", False, "Set to enable plugin"),
-            ("Program", "string", default_path, "The XDP program"),
+            ("Program", "string", str(default_path), "The XDP program"),
             ("PinPath", "string", "/sys/fs/bpf/zeek/", "The XDP pin path"),
             (
                 "AttachMode",
@@ -27,16 +59,28 @@ class XDPZeek(ZeekControl.plugin.Plugin):
                 "unspecified",
                 "The XDP attach mode (native,skb,hw,unspecified)",
             ),
+            (
+                "FlowMapMaxSize",
+                "int",
+                65535,
+                "Max number of shunted flows",
+            ),
+            (
+                "IPPairMapMaxSize",
+                "int",
+                65535,
+                "Max number of shunted IP pairs",
+            ),
+            (
+                "XDPLoader",
+                "string",
+                "${BinDir}/zeek-xdp-loader",
+                "The XDP loader",
+            ),
         ]
 
     def init(self):
-        xdp_program = self.getOption("Program")
-        xdp_pin_path = self.getOption("PinPath")
-        if not xdp_program:
-            return False
-
-        if not xdp_pin_path:
-            # TODO: error here?
+        if not self.getOption("enabled"):
             return False
 
         return True
@@ -53,21 +97,7 @@ class XDPZeek(ZeekControl.plugin.Plugin):
     def cmd_start_pre(self, nodes):
         # Load the XDP program on each unique interface
         cmds = {
-            (
-                node,
-                " ".join(
-                    [
-                        "xdp-loader",
-                        "load",
-                        self.get_interface(node),
-                        self.getOption("Program"),
-                        "-p",
-                        self.getOption("PinPath"),
-                        "-m",
-                        self.getOption("AttachMode"),
-                    ]
-                ),
-            )
+            (node, self.makeLoadCommand(self.get_interface(node)))
             for node in self.uniq_nodes(nodes)
         }
 
@@ -88,17 +118,7 @@ class XDPZeek(ZeekControl.plugin.Plugin):
 
         # Unload the XDP program from each unique interface
         cmds = {
-            (
-                node,
-                " ".join(
-                    [
-                        "xdp-loader",
-                        "unload",
-                        self.get_interface(node),
-                        "--all",  # TODO: Don't unload all!
-                    ]
-                ),
-            )
+            (node, self.makeUnloadCommand(self.get_interface(node)))
             for node in self.uniq_nodes(nodes)
         }
 
@@ -121,9 +141,9 @@ class XDPZeek(ZeekControl.plugin.Plugin):
         script = "\n".join(
             [
                 "# Enable XDP",
-                "@load xdp",
+                "@load frameworks/xdp-shunt",
                 "",
-                "# Set XDP variables",
+                "# Set XDP pin path for maps",
                 f'redef XDP::pin_path = "{pin_path}";',
                 "",
             ]

@@ -1,7 +1,8 @@
-@load base/protocols/conn
-@load xdp/shunt/conn_id
+##! Adds logging to the connection shunter.
 
 module XDP;
+
+@load ./main
 
 export {
 	redef enum Log::ID += { LOG };
@@ -29,7 +30,7 @@ function make_info(cid: conn_id, stats: XDP::ShuntedStats): Info
 	return info;
 	}
 
-event XDP::Shunt::ConnID::unshunted_conn(cid: conn_id, stats: XDP::ShuntedStats)
+event XDP::Shunt::ConnID::connection_shunting_ended(cid: conn_id, stats: XDP::ShuntedStats)
 	{
 	Log::write(LOG, make_info(cid, stats));
 	}

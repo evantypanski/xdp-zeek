@@ -1,18 +1,17 @@
-// clang-format off
+#include "UserXDP.h"
+
 #include <bpf/bpf.h>
 #include <bpf/libbpf.h>
+#include <unistd.h>
+#include <xdp/libxdp.h>
 #include <filesystem>
 #include <optional>
 #include <string>
-#include <unistd.h>
-#include <xdp/libxdp.h>
-#include <zeek/util.h>
 
-#include "UserXDP.h"
+#include "zeek/util.h"
 
-#include "bpf/filter.skel.h"
-#include "bpf/filter_common.h"
-// clang-format on
+#include "filter.skel.h"
+#include "filter_common.h"
 
 bool operator<(const canonical_tuple& lhs, const canonical_tuple& rhs) {
     auto ip1_cmp = compare_ips(&lhs.ip1, &rhs.ip1);
@@ -41,6 +40,8 @@ bool operator<(const ip_pair_key& lhs, const ip_pair_key& rhs) {
     return ip2_cmp < 0;
 }
 
+namespace zeek::plugin::detail::Zeek_XDP_Shunter {
+
 uint32_t flags(xdp_options opts) {
     uint32_t flags = 0;
     switch ( opts.mode ) {
@@ -53,7 +54,7 @@ uint32_t flags(xdp_options opts) {
     return flags;
 }
 
-std::optional<std::string> reconnect(struct filter** skel, xdp_options opts) {
+std::optional<std::string> reuse_maps(struct filter** skel, xdp_options opts) {
     // Exit if the map dir doesn't exist
     if ( ! std::filesystem::exists(opts.pin_path) )
         return "Pin path " + std::string(opts.pin_path) + " does not exist";
@@ -84,7 +85,7 @@ std::optional<std::string> reconnect(struct filter** skel, xdp_options opts) {
     return {};
 }
 
-void disconnect(struct filter** skel) {
+void release_maps(struct filter** skel) {
     filter::destroy(*skel);
     *skel = nullptr;
 }
@@ -204,3 +205,4 @@ void detach_and_destroy_filter(struct filter* skel, int ifindex, xdp_options att
     bpf_xdp_detach(ifindex, flags(attached_opts), &opts);
     filter::destroy(skel);
 }
+} // namespace zeek::plugin::detail::Zeek_XDP_Shunter

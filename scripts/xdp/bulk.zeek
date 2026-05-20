@@ -1,7 +1,9 @@
 ##! Shunt large flows (aka elephant flows).
 
-@load base/protocols/conn
-@load xdp
+@load base/protocols/conn/thresholds
+
+@load ./main
+@load ./shunt-conn-id
 
 module XDP::Shunt::Bulk;
 

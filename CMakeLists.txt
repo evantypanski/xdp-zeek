@@ -9,14 +9,14 @@ pkg_check_modules(LIBBPF REQUIRED IMPORTED_TARGET libbpf)
 
 include(ZeekPlugin)
 
-zeek_plugin_begin(XDP Shunter ${ZEEK_PLUGIN_BEGIN_OPTS})
+zeek_plugin_begin(Zeek XDP_Shunter ${ZEEK_PLUGIN_BEGIN_OPTS})
 zeek_plugin_cc(src/Plugin.cc src/XDPProgram.cc src/ShuntUtil.cc src/bpf/UserXDP.cc)
 zeek_plugin_bif(src/shunter.bif src/ip_pair_shunter.bif src/conn_id_shunter.bif)
 zeek_plugin_dist_files(README CHANGES COPYING VERSION zeekctl/xdp.py)
-zeek_plugin_scripts(scripts/__load__.zeek scripts/__preload__.zeek scripts/types.zeek scripts/xdp/main.zeek scripts/xdp/connect.zeek scripts/xdp/__load__.zeek
-                    scripts/xdp/shunt/conn_id/__load__.zeek scripts/xdp/shunt/conn_id/main.zeek scripts/xdp/shunt/conn_id/log.zeek
-                    scripts/xdp/shunt/ip_pair/__load__.zeek scripts/xdp/shunt/ip_pair/main.zeek
-                    scripts/xdp/shunt/policy/__load__.zeek scripts/xdp/shunt/policy/ssl.zeek scripts/xdp/shunt/policy/bulk.zeek
+zeek_plugin_scripts(scripts/__load__.zeek scripts/__preload__.zeek scripts/types.zeek
+                    scripts/xdp/__load__.zeek scripts/xdp/bulk.zeek scripts/xdp/conn-id-logging.zeek
+                    scripts/xdp/connect.zeek scripts/xdp/main.zeek scripts/xdp/shunt-conn-id.zeek
+                    scripts/xdp/shunt-ip-pair.zeek scripts/xdp/ssl.zeek
                 )
 zeek_plugin_end()
 
@@ -26,7 +26,7 @@ set(BPF_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/src/bpf/filter.c")
 set(BPF_OBJECT "${CMAKE_CURRENT_BINARY_DIR}/bpf/filter.o")
 set(BPF_SKELETON "${CMAKE_CURRENT_BINARY_DIR}/bpf/filter.skel.h")
 
-set(canon_name "XDP_Shunter")
+set(canon_name "Zeek_XDP_Shunter")
 set(dist_tarball_dir ${CMAKE_CURRENT_BINARY_DIR}/dist/${canon_name})
 
 add_custom_command(
@@ -48,7 +48,7 @@ if ("${PROJECT_SOURCE_DIR}" STREQUAL "${CMAKE_SOURCE_DIR}")
     ConfigurePackaging(${VERSION})
 endif ()
 
-target_link_libraries(XDP_Shunter PRIVATE
+target_link_libraries(Zeek_XDP_Shunter PRIVATE
     PkgConfig::LIBXDP
     PkgConfig::LIBBPF
 )
@@ -108,8 +108,8 @@ add_custom_target(bpf_build ALL
     DEPENDS ${BPF_SKELETON}
 )
 
-target_include_directories(XDP_Shunter PRIVATE
+target_include_directories(Zeek_XDP_Shunter PRIVATE
     ${BPF_OUTPUT_DIR}
 )
 
-add_dependencies(XDP_Shunter bpf_build)
+add_dependencies(Zeek_XDP_Shunter bpf_build)

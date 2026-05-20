@@ -1,7 +1,7 @@
 # Zeek XDP Filtering
 
-> [!NOTE]
-> This plugin uses features that are not yet in a Zeek release. The `zeekctl` support is included in this directory. Since this is intended to make it into Zeek as well, it is also in [a branch](https://github.com/zeek/zeekctl/tree/topic/etyp/xdp). Do not use both `zeekctl` plugins at the same time.
+> [!IMPORTANT]
+> This plugin requires Zeek 8.2 or greater.
 
 Uses XDP in order to "shunt" traffic - that way, Zeek doesn't waste its time analyzing packets that won't get any useful information.
 
@@ -10,7 +10,6 @@ The provided scripts do a lot of heavy lifting, with some configuration knobs fo
 ```
 # local.zeek
 @load xdp
-@load xdp/shunt/policy
 ```
 
 This will connect to the loaded XDP program and shunt some traffic. Any shunted traffic will appear in `xdp_shunt.log` once it is unshunted (which is based on timeouts, so feedback may not be immediate). Use the `shunted_conn` event for more immediate feedback.
@@ -88,7 +87,7 @@ This shunts encrypted sessions, then unshunts when it is inactive for a default 
 # Tell Zeek to start a new XDP program, not reconnect
 redef XDP::start_new_xdp = T;
 
-event XDP::Shunt::ConnID::unshunted_conn(cid: conn_id, stats: XDP::ShuntedStats)
+event XDP::Shunt::ConnID::connection_shunting_ended(cid: conn_id, stats: XDP::ShuntedStats)
 	{
 	assert stats$present;
 	print fmt("Unshunted connection from %s:%d<->%s:%d. Transmitted %d bytes and %d packets.",
@@ -99,13 +98,13 @@ event XDP::Shunt::ConnID::unshunted_conn(cid: conn_id, stats: XDP::ShuntedStats)
 		print fmt("Last packet was at %s.", stats$timestamp);
 	}
 
-event XDP::Shunt::ConnID::shunted_conn(cid: conn_id)
+event XDP::Shunt::ConnID::connection_shunting_started(c: connection)
 	{
 	print fmt("Shunted connection from %s:%d<->%s:%d", cid$orig_h, cid$orig_p,
 	    cid$resp_h, cid$resp_p);
 	}
 
-# This is exactly what is in the ssl.zeek shunting policy!
+# This is exactly what is in the ssl.zeek!
 event ssl_established(c: connection)
 	{
 	XDP::Shunt::ConnID::shunt(c);
