@@ -3,12 +3,10 @@
 #include <bpf/bpf.h>
 #include <bpf/libbpf.h>
 #include <unistd.h>
-#include <xdp/libxdp.h>
 #include <filesystem>
 #include <optional>
 #include <string>
 
-#include "filter.skel.h"
 #include "filter_common.h"
 
 bool operator<(const canonical_tuple& lhs, const canonical_tuple& rhs) {
@@ -40,49 +38,30 @@ bool operator<(const ip_pair_key& lhs, const ip_pair_key& rhs) {
 
 namespace zeek::plugin::detail::Zeek_XDP_Shunter {
 
-std::optional<std::string> reuse_maps(struct filter** skel, std::string pin_path) {
+std::pair<int, int> reuse_maps(std::string pin_path) {
     // Exit if the map dir doesn't exist
     if ( ! std::filesystem::exists(pin_path) )
-        return "Pin path " + std::string(pin_path) + " does not exist";
+        return {-1, -1};//"Pin path " + std::string(pin_path) + " does not exist";
 
     // Check each map...
     auto filter_map = pin_path + std::string("/filter_map");
     auto filter_map_fd = bpf_obj_get(filter_map.c_str());
     if ( filter_map_fd < 0 )
-        return "Pinned canonical ID map not found at " + filter_map;
+        return {-1, -1};//"Pinned canonical ID map not found at " + filter_map;
 
     auto ip_pair_map = pin_path + std::string("/ip_pair_map");
-    auto ip_pair_map_fd = bpf_obj_get(filter_map.c_str());
+    auto ip_pair_map_fd = bpf_obj_get(ip_pair_map.c_str());
     if ( ip_pair_map_fd < 0 )
-        return "Pinned IP pair map not found at " + ip_pair_map;
-
-    struct bpf_object_open_opts open_opts = {
-        .sz = sizeof(struct bpf_object_open_opts),
-    };
-    *skel = filter::open(&open_opts);
-
-    if ( ! *skel )
-        return "Failed to open BPF skeleton";
-
-    bpf_map__reuse_fd(get_canonical_id_map(*skel), filter_map_fd);
-    bpf_map__reuse_fd(get_ip_pair_map(*skel), ip_pair_map_fd);
+        return {-1, -1};//"Pinned IP pair map not found at " + ip_pair_map;
 
     // No need to load the program.
-    return {};
+    return {filter_map_fd, ip_pair_map_fd};
 }
-
-void release_maps(struct filter** skel) {
-    filter::destroy(*skel);
-    *skel = nullptr;
-}
-
-struct bpf_map* get_canonical_id_map(struct filter* skel) { return skel->maps.filter_map; }
-struct bpf_map* get_ip_pair_map(struct filter* skel) { return skel->maps.ip_pair_map; }
 
 template<SupportedBpfKey Key>
-std::optional<std::string> update_map(struct bpf_map* map, Key* key) {
+std::optional<std::string> update_map(int fd, Key* key) {
     auto val = shunt_val{0};
-    auto err = bpf_map_update_elem(bpf_map__fd(map), key, &val, BPF_ANY);
+    auto err = bpf_map_update_elem(fd, key, &val, BPF_ANY);
     if ( err ) {
         char err_buf[256];
         libbpf_strerror(err, err_buf, sizeof(err_buf));
@@ -92,12 +71,12 @@ std::optional<std::string> update_map(struct bpf_map* map, Key* key) {
     return {};
 }
 
-template std::optional<std::string> update_map<canonical_tuple>(struct bpf_map* map, canonical_tuple* key);
-template std::optional<std::string> update_map<ip_pair_key>(struct bpf_map* map, ip_pair_key* key);
+template std::optional<std::string> update_map<canonical_tuple>(int fd, canonical_tuple* key);
+template std::optional<std::string> update_map<ip_pair_key>(int fd, ip_pair_key* key);
 
 template<SupportedBpfKey Key>
-std::optional<std::string> remove_from_map(struct bpf_map* map, const Key* key) {
-    auto err = bpf_map_delete_elem(bpf_map__fd(map), key);
+std::optional<std::string> remove_from_map(int fd, const Key* key) {
+    auto err = bpf_map_delete_elem(fd, key);
     if ( err ) {
         char err_buf[256];
         libbpf_strerror(err, err_buf, sizeof(err_buf));
@@ -107,17 +86,17 @@ std::optional<std::string> remove_from_map(struct bpf_map* map, const Key* key) 
     return {};
 }
 
-template std::optional<std::string> remove_from_map<canonical_tuple>(struct bpf_map* map, const canonical_tuple* key);
-template std::optional<std::string> remove_from_map<ip_pair_key>(struct bpf_map* map, const ip_pair_key* key);
+template std::optional<std::string> remove_from_map<canonical_tuple>(int fd, const canonical_tuple* key);
+template std::optional<std::string> remove_from_map<ip_pair_key>(int fd, const ip_pair_key* key);
 
 template<SupportedBpfKey Key>
-std::map<Key, struct shunt_val> get_map(struct bpf_map* map) {
+std::map<Key, struct shunt_val> get_map(int fd) {
     std::map<Key, struct shunt_val> found_map;
     Key next_key;
     Key* prev_key = nullptr;
-    while ( bpf_map_get_next_key(bpf_map__fd(map), prev_key, &next_key) == 0 ) {
+    while ( bpf_map_get_next_key(fd, prev_key, &next_key) == 0 ) {
         shunt_val value;
-        if ( bpf_map_lookup_elem(bpf_map__fd(map), &next_key, &value) != 0 )
+        if ( bpf_map_lookup_elem(fd, &next_key, &value) != 0 )
             // TODO: what would I do?
             return {};
 
@@ -128,19 +107,19 @@ std::map<Key, struct shunt_val> get_map(struct bpf_map* map) {
     return found_map;
 }
 
-template std::map<canonical_tuple, struct shunt_val> get_map<canonical_tuple>(struct bpf_map* map);
-template std::map<ip_pair_key, struct shunt_val> get_map<ip_pair_key>(struct bpf_map* map);
+template std::map<canonical_tuple, struct shunt_val> get_map<canonical_tuple>(int fd);
+template std::map<ip_pair_key, struct shunt_val> get_map<ip_pair_key>(int fd);
 
 template<SupportedBpfKey Key>
-std::optional<shunt_val> get_val(struct bpf_map* map, Key* key) {
+std::optional<shunt_val> get_val(int fd, Key* key) {
     shunt_val value;
 
-    if ( bpf_map_lookup_elem(bpf_map__fd(map), key, &value) != 0 )
+    if ( bpf_map_lookup_elem(fd, key, &value) != 0 )
         return std::nullopt;
 
     return value;
 }
 
-template std::optional<shunt_val> get_val<canonical_tuple>(struct bpf_map* map, canonical_tuple* key);
-template std::optional<shunt_val> get_val<ip_pair_key>(struct bpf_map* map, ip_pair_key* key);
+template std::optional<shunt_val> get_val<canonical_tuple>(int fd, canonical_tuple* key);
+template std::optional<shunt_val> get_val<ip_pair_key>(int fd, ip_pair_key* key);
 } // namespace zeek::plugin::detail::Zeek_XDP_Shunter

@@ -1,9 +1,5 @@
 #include "Plugin.h"
 
-#include "zeek/IntrusivePtr.h"
-
-#include "XDPProgram.h"
-
 namespace zeek::plugin::detail::Zeek_XDP_Shunter {
 Plugin plugin;
 } // namespace zeek::plugin::detail::Zeek_XDP_Shunter
@@ -19,5 +15,3 @@ zeek::plugin::Configuration Plugin::Configure() {
     config.version.patch = 0;
     return config;
 }
-
-void Plugin::InitPostScript() { program_opaque = zeek::make_intrusive<zeek::OpaqueType>("XDP::Program"); }

@@ -45,12 +45,12 @@ export {
 function get_map(time_since_last_packet: interval &default=0sec)
     : XDP::shunt_table
 	{
-	return __get_map(XDP::xdp_prog, time_since_last_packet);
+	return __get_map(XDP::xdp_fds$ip_pair_map_fd, time_since_last_packet);
 	}
 
 function shunt(pair: XDP::ip_pair): bool
 	{
-	local result = __shunt(XDP::xdp_prog, pair);
+	local result = __shunt(XDP::xdp_fds$ip_pair_map_fd, pair);
 	if ( result )
 		event shunted_pair(pair);
 
@@ -59,12 +59,12 @@ function shunt(pair: XDP::ip_pair): bool
 
 function shunt_stats(pair: XDP::ip_pair): XDP::ShuntedStats
 	{
-	return __shunt_stats(XDP::xdp_prog, pair);
+	return __shunt_stats(XDP::xdp_fds$ip_pair_map_fd, pair);
 	}
 
 function unshunt(pair: XDP::ip_pair): XDP::ShuntedStats
 	{
-	local stats = __unshunt(XDP::xdp_prog, pair);
+	local stats = __unshunt(XDP::xdp_fds$ip_pair_map_fd, pair);
 	if ( stats$present )
 		event unshunted_pair(pair, stats);
 

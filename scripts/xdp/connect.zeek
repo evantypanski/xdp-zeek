@@ -41,3 +41,8 @@ event zeek_init()
 
 	reuse_maps(pin_path);
 	}
+
+event zeek_done()
+	{
+	release_maps();
+	}

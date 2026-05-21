@@ -21,6 +21,9 @@ std::optional<canonical_tuple> makeBPFMapTuple(zeek::RecordVal* cid_r);
 // Make the IP pair key used within a BPF map from the IP pair script val.
 ip_pair_key makeIPPairKey(zeek::RecordVal* pair_r);
 
+// Makes the shunt FDs record to go back into Zeek script
+zeek::RecordValPtr makeShuntFDs(int filter_map_fd, int ip_pair_map_fd);
+
 // Make empty shunted statistics that are labelled as not present.
 zeek::RecordValPtr makeEmptyShuntedStats();
 

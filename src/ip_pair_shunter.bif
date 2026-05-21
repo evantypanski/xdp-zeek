@@ -5,7 +5,6 @@
 #include "zeek/IPAddr.h"
 #include "zeek/Val.h"
 #include "ShuntUtil.h"
-#include "XDPProgram.h"
 #include "bpf/UserXDP.h"
 #include "bpf/filter_common.h"
 
@@ -14,26 +13,17 @@ using namespace zeek::plugin::detail::Zeek_XDP_Shunter;
 
 module XDP::Shunt::IPPair;
 
-function __get_map%(xdp_prog: opaque of XDP::Program,
-                time_since_last_packet: interval &default=0sec%) : XDP::shunt_table %{
-    auto zeek_prog = XDPProgramVal::CastFromAny(xdp_prog);
+function __get_map%(fd: int, time_since_last_packet: interval &default=0sec%) : XDP::shunt_table %{
     static auto ip_shunt_table = zeek::id::find_type<zeek::TableType>("XDP::ip_pair_shunt_table");
     static auto ip_pair = zeek::id::find_type<zeek::RecordType>("XDP::ip_pair");
     auto zeek_table = zeek::make_intrusive<zeek::TableVal>(ip_shunt_table);
 
-    if ( ! zeek_prog ) {
-        zeek::reporter->Error("%s", zeek_prog.error().c_str());
+    if ( fd < 0 ) {
+        zeek::reporter->Error("IP pair map not properly loaded");
         return zeek_table;
     }
 
-    if ( ! (*zeek_prog)->is_set ) {
-        zeek::reporter->Error("invalid XDP program; was it started properly?");
-        return zeek_table;
-    }
-
-    auto prog = (*zeek_prog)->prog;
-
-    auto shunt_map = get_map<ip_pair_key>(get_ip_pair_map(prog));
+    auto shunt_map = get_map<ip_pair_key>(fd);
     for ( const auto& [key, val] : shunt_map ) {
         // Skip if we are still within time_since_last_packet
         if ( time_since_last_packet &&
@@ -43,32 +33,22 @@ function __get_map%(xdp_prog: opaque of XDP::Program,
         auto zeek_key = zeek::make_intrusive<zeek::RecordVal>(ip_pair);
         zeek_key->Assign(0,
                          zeek::make_intrusive<zeek::AddrVal>(reinterpret_cast<const uint32_t*>(&key.ip1.s6_addr)));
-
         zeek_key->Assign(1,
                          zeek::make_intrusive<zeek::AddrVal>(reinterpret_cast<const uint32_t*>(&key.ip2.s6_addr)));
-
         zeek_table->Assign(zeek_key, makeShuntedStats(true, &val));
     }
 
     return zeek_table;
 %}
 
-function __shunt%(xdp_prog: opaque of XDP::Program, pair: XDP::ip_pair%) : bool %{
-    auto zeek_prog = XDPProgramVal::CastFromAny(xdp_prog);
-    if ( ! zeek_prog ) {
-        zeek::reporter->Error("%s", zeek_prog.error().c_str());
+function __shunt%(fd: int, pair: XDP::ip_pair%) : bool %{
+    if ( fd < 0 ) {
+        zeek::reporter->Error("IP pair map not properly loaded");
         return zeek::val_mgr->Bool(false);
     }
 
-    if ( ! (*zeek_prog)->is_set ) {
-        zeek::reporter->Error("invalid XDP program; was it started properly?");
-        return zeek::val_mgr->Bool(false);
-    }
-
-    auto prog = (*zeek_prog)->prog;
     auto key = makeIPPairKey(pair->AsRecordVal());
-
-    auto err = update_map(get_ip_pair_map(prog), &key);
+    auto err = update_map(fd, &key);
 
     if ( err ) {
         zeek::reporter->Error("Failed to add to map: %s", (*err).c_str());
@@ -78,22 +58,15 @@ function __shunt%(xdp_prog: opaque of XDP::Program, pair: XDP::ip_pair%) : bool 
     return zeek::val_mgr->Bool(true);
 %}
 
-function __shunt_stats%(xdp_prog: opaque of XDP::Program, pair: XDP::ip_pair%) : XDP::ShuntedStats %{
-    auto zeek_prog = XDPProgramVal::CastFromAny(xdp_prog);
-    if ( ! zeek_prog ) {
-        zeek::reporter->Error("%s", zeek_prog.error().c_str());
+function __shunt_stats%(fd: int, pair: XDP::ip_pair%) : XDP::ShuntedStats %{
+    if ( fd < 0 ) {
+        zeek::reporter->Error("IP pair map not properly loaded");
         return makeEmptyShuntedStats();
     }
 
-    if ( ! (*zeek_prog)->is_set ) {
-        zeek::reporter->Error("invalid XDP program; was it started properly?");
-        return makeEmptyShuntedStats();
-    }
-
-    auto prog = (*zeek_prog)->prog;
     auto key = makeIPPairKey(pair->AsRecordVal());
 
-    auto opt_val = get_val(get_ip_pair_map(prog), &key);
+    auto opt_val = get_val(fd, &key);
     if ( ! opt_val )
         return makeEmptyShuntedStats();
 
@@ -105,26 +78,18 @@ function __shunt_stats%(xdp_prog: opaque of XDP::Program, pair: XDP::ip_pair%) :
 ## Returns: The shunted statistics right before removing
 ##
 ## .. zeek:see:: shunt shunt_stats
-function __unshunt%(xdp_prog: opaque of XDP::Program, pair: XDP::ip_pair%) : XDP::ShuntedStats %{
-    auto zeek_prog = XDPProgramVal::CastFromAny(xdp_prog);
-    if ( ! zeek_prog ) {
-        zeek::reporter->Error("%s", zeek_prog.error().c_str());
+function __unshunt%(fd: int, pair: XDP::ip_pair%) : XDP::ShuntedStats %{
+    if ( fd < 0 ) {
+        zeek::reporter->Error("IP pair map not properly loaded");
         return makeEmptyShuntedStats();
     }
 
-    if ( ! (*zeek_prog)->is_set ) {
-        zeek::reporter->Error("invalid XDP program; was it started properly?");
-        return makeEmptyShuntedStats();
-    }
-
-    auto prog = (*zeek_prog)->prog;
     auto key = makeIPPairKey(pair->AsRecordVal());
-
-    auto opt_val = get_val(get_ip_pair_map(prog), &key);
+    auto opt_val = get_val(fd, &key);
     if ( ! opt_val )
         return makeEmptyShuntedStats();
 
-    auto err = remove_from_map(get_ip_pair_map(prog), &key);
+    auto err = remove_from_map(fd, &key);
 
     if ( err ) {
         zeek::reporter->Error("Failed to add to map: %s", (*err).c_str());

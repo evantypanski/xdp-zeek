@@ -20,13 +20,6 @@ export {
 	## Releases the XDP program maps without unloading it.
 	global release_maps: function();
 
-	## Begins shunting with XDP by loading the XDP program and necessary BPF maps.
-	##
-	## Returns: An opaque value representing the now-attached BPF program
-	##
-	## .. zeek:see:: detach
-	global load_and_attach: function(options: XDP::ShuntOptions): bool;
-
 	## Stops the XDP shunting program.
 	##
 	## Returns: Whether the operation succeeded
@@ -40,7 +33,7 @@ export {
 
 	## The handle for the XDP program, used internally for any
 	## operations pertaining to it or its maps.
-	global xdp_prog: opaque of XDP::Program;
+	global xdp_fds: ShuntingFDs;
 
 	## Whether or not vlans should be included. This is necessary to
 	## construct the correct "canonical" tuple for the XDP program.
@@ -54,14 +47,13 @@ export {
 
 function reuse_maps(pin_path: string): bool
 	{
-	xdp_prog = __reuse_maps(pin_path);
-	# TODO: if it fails this should probably return F
-	return T;
+	xdp_fds = __reuse_maps(pin_path);
+	return xdp_fds$filter_map_fd < 0 || xdp_fds$ip_pair_map_fd < 0;
 	}
 
 function release_maps()
 	{
-	__release_maps(xdp_prog);
+	__release_maps(xdp_fds$filter_map_fd, xdp_fds$ip_pair_map_fd);
 	}
 
 function conn_id_to_canonical(cid: conn_id): XDP::canonical_id

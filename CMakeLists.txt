@@ -10,7 +10,7 @@ pkg_check_modules(LIBBPF REQUIRED IMPORTED_TARGET libbpf)
 include(ZeekPlugin)
 
 zeek_plugin_begin(Zeek XDP_Shunter ${ZEEK_PLUGIN_BEGIN_OPTS})
-zeek_plugin_cc(src/Plugin.cc src/XDPProgram.cc src/ShuntUtil.cc src/bpf/UserXDP.cc)
+zeek_plugin_cc(src/Plugin.cc src/ShuntUtil.cc src/bpf/UserXDP.cc)
 zeek_plugin_bif(src/shunter.bif src/ip_pair_shunter.bif src/conn_id_shunter.bif)
 zeek_plugin_dist_files(README CHANGES COPYING VERSION zeekctl/xdp.py)
 zeek_plugin_scripts(scripts/__load__.zeek scripts/__preload__.zeek scripts/types.zeek
@@ -55,7 +55,6 @@ target_link_libraries(Zeek_XDP_Shunter PRIVATE
 
 find_program(CLANG_EXECUTABLE clang)
 find_program(BPF_GCC_EXECUTABLE NAMES bpf-gcc bpf-unknown-none-gcc)
-find_program(BPFTOOL_EXECUTABLE bpftool REQUIRED)
 
 if ( NOT CLANG_EXECUTABLE AND NOT BPF_GCC_EXECUTABLE )
    message(FATAL_ERROR "clang or bpf-gcc are required to be in your PATH to build this plugin")
@@ -96,20 +95,6 @@ elseif ( BPF_GCC_EXECUTABLE )
     )
 endif ()
 
-add_custom_command(
-    OUTPUT ${BPF_SKELETON}
-    COMMAND bash -c "${BPFTOOL_EXECUTABLE} gen skeleton ${BPF_OBJECT} > ${BPF_SKELETON}"
-    DEPENDS ${BPF_OBJECT}
-    COMMENT "Generating BPF skeleton ${BPF_SKELETON}"
-    VERBATIM
-)
-
-add_custom_target(bpf_build ALL
-    DEPENDS ${BPF_SKELETON}
-)
-
 target_include_directories(Zeek_XDP_Shunter PRIVATE
     ${BPF_OUTPUT_DIR}
 )
-
-add_dependencies(Zeek_XDP_Shunter bpf_build)

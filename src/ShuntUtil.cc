@@ -90,6 +90,15 @@ double monoToWall(uint64_t bpf_monotonic_ns) {
     return (double)packet_wall_time_ns / 1e9;
 }
 
+// Makes the shunt FDs record to go back into Zeek script
+zeek::RecordValPtr makeShuntFDs(int filter_map_fd, int ip_pair_map_fd) {
+    static auto shunt_fds_type = zeek::id::find_type<zeek::RecordType>("XDP::ShuntingFDs");
+    auto fds = zeek::make_intrusive<zeek::RecordVal>(shunt_fds_type);
+    fds->Assign(0, filter_map_fd);
+    fds->Assign(1, ip_pair_map_fd);
+    return fds;
+}
+
 // The boolean decides which way ip1 was in the map
 zeek::RecordValPtr makeShuntedStats(bool orig_is_ip1, const shunt_val* val) {
     static auto shunt_stats_type = zeek::id::find_type<zeek::RecordType>("XDP::ShuntedStats");

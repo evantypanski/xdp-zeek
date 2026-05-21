@@ -43,34 +43,22 @@ concept SupportedBpfKey = IsAnyOf<T, canonical_tuple, ip_pair_key>;
  * the brittle Zeek process is not in charge of the health of the XDP
  * program.
  */
-std::optional<std::string> reuse_maps(struct filter**, std::string pin_path);
-
-/**
- * Releases the maps from this program. This does NOT unload or
- * otherwise invalidate the XDP program or its maps.
- */
-void release_maps(struct filter**);
-
-/** Retrieve the canonical ID BPF map of shunted flows. */
-struct bpf_map* get_canonical_id_map(struct filter* skel);
-
-/** Retrieve the IP pair BPF map of shunted pairs. */
-struct bpf_map* get_ip_pair_map(struct filter* skel);
+std::pair<int, int> reuse_maps(std::string pin_path);
 
 /** Adds a key to the map. */
 template<SupportedBpfKey Key>
-std::optional<std::string> update_map(struct bpf_map* map, Key* key);
+std::optional<std::string> update_map(int fd, Key* key);
 
 /** Removes a key to the map. */
 template<SupportedBpfKey Key>
-std::optional<std::string> remove_from_map(struct bpf_map* map, const Key* key);
+std::optional<std::string> remove_from_map(int fd, const Key* key);
 
 /** Retrieves the keys and elements of a given map. */
 template<SupportedBpfKey Key>
-std::map<Key, struct shunt_val> get_map(struct bpf_map* map);
+std::map<Key, struct shunt_val> get_map(int fd);
 
 /** Retrieves the value of a given key in a map, if any. */
 template<SupportedBpfKey Key>
-std::optional<shunt_val> get_val(struct bpf_map* map, Key* key);
+std::optional<shunt_val> get_val(int fd, Key* key);
 
 } // namespace zeek::plugin::detail::Zeek_XDP_Shunter

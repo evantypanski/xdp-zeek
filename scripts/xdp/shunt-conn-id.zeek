@@ -72,7 +72,7 @@ export {
 function get_map(time_since_last_packet: interval &default=0sec)
     : XDP::shunt_table
 	{
-	return __get_map(XDP::xdp_prog, time_since_last_packet);
+	return __get_map(XDP::xdp_fds$filter_map_fd, time_since_last_packet);
 	}
 
 function shunt(c: connection): bool
@@ -80,7 +80,7 @@ function shunt(c: connection): bool
 	if ( ! hook XDP::shunting(c) )
 		return F;
 
-	local result = __shunt(XDP::xdp_prog, XDP::conn_id_to_canonical(c$id));
+	local result = __shunt(XDP::xdp_fds$filter_map_fd, XDP::conn_id_to_canonical(c$id));
 	if ( result )
 		{
 		if ( shunt_timeout )
@@ -97,12 +97,12 @@ function shunt(c: connection): bool
 
 function shunt_stats(c: connection): XDP::ShuntedStats
 	{
-	return __shunt_stats(XDP::xdp_prog, XDP::conn_id_to_canonical(c$id));
+	return __shunt_stats(XDP::xdp_fds$filter_map_fd, XDP::conn_id_to_canonical(c$id));
 	}
 
 function unshunt(c: connection): XDP::ShuntedStats
 	{
-	local stats = __unshunt(XDP::xdp_prog, XDP::conn_id_to_canonical(c$id));
+	local stats = __unshunt(XDP::xdp_fds$filter_map_fd, XDP::conn_id_to_canonical(c$id));
 	if ( stats$present )
 		event connection_shunting_ended(c$id, stats);
 
