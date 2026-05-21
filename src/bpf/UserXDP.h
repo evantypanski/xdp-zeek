@@ -25,23 +25,8 @@ enum xdp_action { // NOLINT(performance-enum-size)
     XDP_REDIRECT,
 };
 
-enum xdp_attach_mode { // NOLINT(performance-enum-size)
-    XDP_MODE_UNSPEC = 0,
-    XDP_MODE_NATIVE,
-    XDP_MODE_SKB,
-    XDP_MODE_HW,
-};
-
 struct ring_buffer;
 #endif
-
-struct xdp_options {
-    xdp_attach_mode mode;
-    __u32 conn_id_map_max_size;
-    __u32 ip_pair_map_max_size;
-    bool include_vlan;
-    const char* pin_path;
-};
 
 // Helper
 template<typename T, typename... U>
@@ -58,31 +43,13 @@ concept SupportedBpfKey = IsAnyOf<T, canonical_tuple, ip_pair_key>;
  * the brittle Zeek process is not in charge of the health of the XDP
  * program.
  */
-std::optional<std::string> reuse_maps(struct filter**, xdp_options opts);
+std::optional<std::string> reuse_maps(struct filter**, std::string pin_path);
 
 /**
  * Releases the maps from this program. This does NOT unload or
  * otherwise invalidate the XDP program or its maps.
  */
 void release_maps(struct filter**);
-
-/**
- * Loads and attaches to the XDP program. This will simply grab the file
- * descriptor if it's already there, otherwise it will load the XDP program
- * itself.
- *
- * Normally, the Zeek cluster should start the XDP program before, then
- * each process simply gets the FD.
- */
-std::optional<std::string> load_and_attach(int ifindex, xdp_options opts, struct filter**);
-
-/**
- * Detaches the XDP program and unpins the maps. Note that this should only
- * ever be done with a corresponding load_and_attach call. Otherwise, it
- * should not be up to the Zeek process itself to load and unload the XDP
- * program.
- */
-void detach_and_destroy_filter(struct filter* skel, int ifindex, xdp_options opts);
 
 /** Retrieve the canonical ID BPF map of shunted flows. */
 struct bpf_map* get_canonical_id_map(struct filter* skel);

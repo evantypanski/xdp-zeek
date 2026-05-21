@@ -12,8 +12,6 @@ extern zeek::OpaqueTypePtr program_opaque;
 class XDPProgramVal : public zeek::OpaqueVal {
 public:
     XDPProgramVal() : zeek::OpaqueVal(program_opaque) {}
-    XDPProgramVal(struct filter* prog, xdp_options opts)
-        : OpaqueVal(program_opaque), prog(prog), opts(opts), is_set(true) {}
     XDPProgramVal(struct filter* prog) : OpaqueVal(program_opaque), prog(prog), is_set(true) {}
 
     ~XDPProgramVal() override = default;
@@ -31,7 +29,6 @@ public:
 
     struct filter* prog = nullptr;
     // Needed for detaching at the end if Zeek loaded the XDP program.
-    xdp_options opts = {};
     bool is_set = false;
 
 protected:

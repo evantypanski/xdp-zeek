@@ -12,7 +12,7 @@ The provided scripts do a lot of heavy lifting, with some configuration knobs fo
 @load xdp
 ```
 
-This will connect to the loaded XDP program and shunt some traffic. Any shunted traffic will appear in `xdp_shunt.log` once it is unshunted (which is based on timeouts, so feedback may not be immediate). Use the `shunted_conn` event for more immediate feedback.
+This will connect to the loaded XDP program's maps and shunt some traffic. Any shunted traffic will appear in `xdp_shunt.log` once it is unshunted (which is based on timeouts, so feedback may not be immediate). Use the `connection_shunting_started` event for more immediate feedback.
 
 Clusters need to load the XDP program before starting. The XDP program should be magically found, but you must enable `zeekctl` loading the XDP plugin (in `zeekctl.cfg`):
 
@@ -30,16 +30,7 @@ To change the loaded XDP program, set the corresponding option in `zeekctl.cfg`.
 xdp.Program = /home/etyp/src/zeek-xdp-shunter/build/bpf/filter.o
 ```
 
-If you want to just load the XDP program on a standalone instance, you can tell the shunter to do so. This means that Zeek itself will load the program, so it must have necessary permissions. This option is primarily for testing. Just add this to the `local.zeek` file in order to tell Zeek to load the XDP program on init:
-
-```
-# local.zeek
-redef XDP::start_new_xdp = T;
-```
-
-However, this might cause issues in clusters, where not every Zeek process is listening on an interface.
-
-For more complex environments, some combination of loading the XDP programs before with `xdp-loader` pinned at `/sys/fs/bpf/zeek` on each interface and simply loading with `@load xdp` should work.
+Zeek does not load the XDP programs itself because of clusters. For more complex environments, some combination of loading the XDP programs before with `xdp-loader` pinned at `/sys/fs/bpf/zeek` on each interface and simply loading with `@load xdp` should work.
 
 ## Building
 
@@ -77,15 +68,18 @@ sudo apt install xdp-tools
 
 You may also choose to manually shunt connections based on your own criteria. You can use the provided functions for that.
 
+> [!NOTE]
+> Zeek does not load or unload XDP programs, it is the user's job to do this. `zeekctl` will do it when prompted, but for standalone invocations,
+> make sure the XDP program is loaded first.
+>
+> TODO: Make a section on loading/unloading when that's finalized
+
 ### Flow-based shunting
 
 This shunts encrypted sessions, then unshunts when it is inactive for a default amount of time:
 
 ```
 @load xdp
-
-# Tell Zeek to start a new XDP program, not reconnect
-redef XDP::start_new_xdp = T;
 
 event XDP::Shunt::ConnID::connection_shunting_ended(cid: conn_id, stats: XDP::ShuntedStats)
 	{
@@ -109,11 +103,6 @@ event ssl_established(c: connection)
 	{
 	XDP::Shunt::ConnID::shunt(c);
 	}
-
-event zeek_done()
-	{
-	XDP::end_shunt();
-	}
 ```
 
 The flow-based shunting relies on timeouts to unshunt connections. Because Zeek never sees the connection, Zeek attempts to time it out after the default timeout interval. This is always going to be necessary for many connections. We then add special logic that checks the shunted connection: if the last *shunted* packet is in the provided timeout range, then we can continue to timing the connection out. Otherwise, the shunter will block Zeek from timing out the connection.
@@ -124,9 +113,6 @@ Shunting with IP pairs is similar:
 
 ```
 @load xdp
-
-# Tell Zeek to start a new XDP program, not reconnect
-redef XDP::start_new_xdp = T;
 
 event XDP::Shunt::IPPair::unshunted_pair(pair: XDP::ip_pair,
     stats: XDP::ShuntedStats)
@@ -156,11 +142,6 @@ event ssl_established(c: connection)
 event connection_state_remove(c: connection)
 	{
 	XDP::Shunt::IPPair::unshunt([ $ip1=c$id$orig_h, $ip2=c$id$resp_h ]);
-	}
-
-event zeek_done()
-	{
-	XDP::end_shunt();
 	}
 ```
 
