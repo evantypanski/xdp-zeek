@@ -44,7 +44,7 @@ std::pair<int, int> reuse_maps(std::string pin_path) {
         return {-1, -1};//"Pin path " + std::string(pin_path) + " does not exist";
 
     // Check each map...
-    auto filter_map = pin_path + std::string("/filter_map");
+    auto filter_map = pin_path + std::string("/shunt_map");
     auto filter_map_fd = bpf_obj_get(filter_map.c_str());
     if ( filter_map_fd < 0 )
         return {-1, -1};//"Pinned canonical ID map not found at " + filter_map;

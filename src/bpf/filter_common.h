@@ -1,10 +1,10 @@
+// TODO: This file is duplicated in the C++ loader.
+
 #ifndef __FILTER_COMMON_H
 #define __FILTER_COMMON_H
 
-#ifndef __BPF_BUILD__
 #include <linux/types.h>
 #include <netinet/in.h>
-#endif
 
 struct canonical_tuple {
     struct in6_addr ip1; // The lower IP
