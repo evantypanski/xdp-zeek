@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import ZeekControl.plugin
 
 
@@ -17,18 +15,17 @@ class XDPZeek(ZeekControl.plugin.Plugin):
         return " ".join(
             [
                 self.getOption("XDPLoader"),
-                "--pin-path-prefix",
+                "--pin-path",
                 self.getOption("PinPath"),
                 "load",
-                "--obj",
-                self.getOption("Program"),
-                "--iface",
+                "--shunter", #TODO
+                "--dev",
                 interface,
                 "-m",
                 self.getOption("AttachMode"),
-                "--flow-map-max-size",
+                "--shunt-flow-map-max-entries",
                 str(self.getOption("FlowMapMaxSize")),
-                "--ip-pair-map-max-size",
+                "--shunt-ip-pair-map-max-entries",
                 str(self.getOption("IPPairMapMaxSize")),
             ]
         )
@@ -37,26 +34,23 @@ class XDPZeek(ZeekControl.plugin.Plugin):
         return " ".join(
             [
                 self.getOption("XDPLoader"),
-                "--pin-path-prefix",
+                "--pin-path",
                 self.getOption("PinPath"),
                 "unload",
-                "--iface",
+                "--dev",
                 interface,
+                "--force",
             ]
         )
 
     def options(self):
-        plugin_dir = self.getGlobalOption("PluginZeekDir")
-        default_path = Path(plugin_dir) / "xdp_shunt" / "bpf" / "filter.o"
-
         return [
-            ("enabled", "bool", False, "Set to enable plugin"),
-            ("Program", "string", str(default_path), "The XDP program"),
+            ("EnableShunter", "bool", False, "Enables the XDP shunter"),
             ("PinPath", "string", "/sys/fs/bpf/zeek/", "The XDP pin path"),
             (
                 "AttachMode",
                 "string",
-                "unspecified",
+                "auto",
                 "The XDP attach mode (native,skb,hw,unspecified)",
             ),
             (
@@ -80,7 +74,7 @@ class XDPZeek(ZeekControl.plugin.Plugin):
         ]
 
     def init(self):
-        if not self.getOption("enabled"):
+        if not self.getOption("EnableShunter"):
             return False
 
         return True
@@ -141,7 +135,7 @@ class XDPZeek(ZeekControl.plugin.Plugin):
         script = "\n".join(
             [
                 "# Enable XDP",
-                "@load frameworks/xdp-shunt",
+                "@load xdp",
                 "",
                 "# Set XDP pin path for maps",
                 f'redef XDP::pin_path = "{pin_path}";',
