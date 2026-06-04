@@ -14,7 +14,7 @@ zeek_plugin_cc(src/Plugin.cc src/ShuntUtil.cc src/bpf/UserXDP.cc)
 zeek_plugin_bif(src/shunter.bif src/ip_pair_shunter.bif src/conn_id_shunter.bif)
 zeek_plugin_dist_files(README CHANGES COPYING VERSION zeekctl/xdp.py)
 zeek_plugin_scripts(scripts/__load__.zeek scripts/__preload__.zeek scripts/types.zeek
-                    scripts/xdp/__load__.zeek scripts/xdp/bulk.zeek scripts/xdp/conn-id-logging.zeek
+                    scripts/xdp/__load__.zeek scripts/xdp/bulk.zeek
                     scripts/xdp/connect.zeek scripts/xdp/main.zeek scripts/xdp/shunt-conn-id.zeek
                     scripts/xdp/shunt-ip-pair.zeek scripts/xdp/ssl.zeek
                 )

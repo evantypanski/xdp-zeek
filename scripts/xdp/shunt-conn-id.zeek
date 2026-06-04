@@ -11,6 +11,22 @@ module XDP::Shunt::ConnID;
 @load ./main
 
 export {
+	redef enum Log::ID += { LOG };
+
+	## The trigger that caused the connection to get shunted.
+	type ShuntTrigger: enum { UNKNOWN } &redef;
+
+	## Logged info for shunting. This will not be accurate until the
+	## connection is unshunted.
+	type Info: record {
+		id: conn_id &log;
+		shunt_trigger: ShuntTrigger &log &default=UNKNOWN;
+		# These stats are potentially out of date until unshunted
+		bytes_shunted: count &log &default=0;
+		packets_shunted: count &log &default=0;
+		last_packet: time &log &optional;
+	};
+
 	## Retrieves the current values in the canonical ID map.
 	##
 	## time_since_last_packet: Interval that must elapse since the last packet
@@ -25,7 +41,8 @@ export {
 	## Returns: Whether the operation succeeded
 	##
 	## .. zeek:see:: unshunt shunt_stats
-	global shunt: function(c: connection): bool;
+	global shunt: function(c: connection, trigger: ShuntTrigger &default=UNKNOWN)
+	    : bool;
 
 	## Provides the shunting statistics for this connection ID.
 	##
@@ -69,18 +86,25 @@ export {
 	global finalize_shunt: Conn::RemovalHook;
 }
 
+redef record connection += {
+	xdp_shunt: Info &optional;
+};
+
 function get_map(time_since_last_packet: interval &default=0sec)
     : XDP::shunt_table
 	{
 	return __get_map(XDP::xdp_fds$filter_map_fd, time_since_last_packet);
 	}
 
-function shunt(c: connection): bool
+function shunt(c: connection, trigger: ShuntTrigger): bool
 	{
+	c$xdp_shunt = [ $id=c$id, $shunt_trigger=trigger ];
+
 	if ( ! hook XDP::shunting(c) )
 		return F;
 
-	local result = __shunt(XDP::xdp_fds$filter_map_fd, XDP::conn_id_to_canonical(c$id));
+	local result = __shunt(XDP::xdp_fds$filter_map_fd, XDP::conn_id_to_canonical(
+	    c$id));
 	if ( result )
 		{
 		if ( shunt_timeout )
@@ -97,14 +121,16 @@ function shunt(c: connection): bool
 
 function shunt_stats(c: connection): XDP::ShuntedStats
 	{
-	return __shunt_stats(XDP::xdp_fds$filter_map_fd, XDP::conn_id_to_canonical(c$id));
+	return __shunt_stats(XDP::xdp_fds$filter_map_fd, XDP::conn_id_to_canonical(
+	    c$id));
 	}
 
 function unshunt(c: connection): XDP::ShuntedStats
 	{
-	local stats = __unshunt(XDP::xdp_fds$filter_map_fd, XDP::conn_id_to_canonical(c$id));
+	local stats = __unshunt(XDP::xdp_fds$filter_map_fd, XDP::conn_id_to_canonical(
+	    c$id));
 	if ( stats$present )
-		event connection_shunting_ended(c$id, stats);
+		event connection_shunting_ended(c, stats);
 
 	return stats;
 	}
@@ -128,4 +154,26 @@ hook ::connection_timing_out(c: connection)
 hook finalize_shunt(c: connection)
 	{
 	XDP::Shunt::ConnID::unshunt(c);
+	}
+
+event XDP::Shunt::ConnID::connection_shunting_ended(c: connection,
+    stats: XDP::ShuntedStats)
+	{
+	if ( ! c?$xdp_shunt )
+		c$xdp_shunt = [ $id=c$id ];
+
+	# Update shunt stats
+	info$bytes_shunted = stats$bytes_from_1 + stats$bytes_from_2;
+	info$packets_shunted = stats$packets_from_1 + stats$packets_from_2;
+
+	if ( stats?$timestamp )
+		info$last_packet = stats$timestamp;
+
+	Log::write(LOG, c$xdp_shunt);
+	}
+
+# For logging
+event zeek_init()
+	{
+	Log::create_stream(XDP::Shunt::ConnID::LOG, [ $columns=Info, $path="xdp_shunt" ]);
 	}

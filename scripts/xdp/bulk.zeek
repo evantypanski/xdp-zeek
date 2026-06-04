@@ -18,6 +18,8 @@ export {
 const activation_packet_count = 10;
 redef ConnThreshold::generic_packet_thresholds += {activation_packet_count};
 
+redef enum XDP::Shunt::ConnID::ShuntTrigger += { BULK };
+
 event conn_generic_packet_threshold_crossed(c: connection, threshold: count)
 	{
 	if ( threshold != activation_packet_count )
@@ -32,5 +34,5 @@ event ConnThreshold::bytes_threshold_crossed(c: connection, threshold: count, is
 	if ( threshold != size_threshold )
 		return;
 
-	XDP::Shunt::ConnID::shunt(c);
+	XDP::Shunt::ConnID::shunt(c, BULK);
 	}

@@ -16,7 +16,7 @@ module XDP::Shunt::ConnID;
 ## Event raised whenever a connection is shunted.
 event connection_shunting_started%(c: connection%);
 ## Event raised whenever a connection is unshunted.
-event connection_shunting_ended%(cid: conn_id, stats: XDP::ShuntedStats%); 
+event connection_shunting_ended%(c: connection, stats: XDP::ShuntedStats%); 
 
 function __get_map%(fd: int, time_since_last_packet: interval &default=0sec%) : XDP::shunt_table %{
     static auto shunt_table = zeek::id::find_type<zeek::TableType>("XDP::shunt_table");
