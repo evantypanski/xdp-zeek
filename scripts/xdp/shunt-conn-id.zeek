@@ -163,11 +163,11 @@ event XDP::Shunt::ConnID::connection_shunting_ended(c: connection,
 		c$xdp_shunt = [ $id=c$id ];
 
 	# Update shunt stats
-	info$bytes_shunted = stats$bytes_from_1 + stats$bytes_from_2;
-	info$packets_shunted = stats$packets_from_1 + stats$packets_from_2;
+	c$xdp_shunt$bytes_shunted = stats$bytes_from_1 + stats$bytes_from_2;
+	c$xdp_shunt$packets_shunted = stats$packets_from_1 + stats$packets_from_2;
 
 	if ( stats?$timestamp )
-		info$last_packet = stats$timestamp;
+		c$xdp_shunt$last_packet = stats$timestamp;
 
 	Log::write(LOG, c$xdp_shunt);
 	}
