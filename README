@@ -9,7 +9,7 @@ The provided scripts do a lot of heavy lifting, with some configuration knobs fo
 
 ```
 # local.zeek
-@load xdp
+@load xdp-shunt
 ```
 
 This will connect to the loaded XDP program's maps and shunt some traffic. Any shunted traffic will appear in `xdp_shunt.log` once it is unshunted (which is based on timeouts, so feedback may not be immediate). Use the `connection_shunting_started` event for more immediate feedback.
@@ -30,7 +30,7 @@ To change the loaded XDP program, set the corresponding option in `zeekctl.cfg`.
 xdp.Program = /home/etyp/src/zeek-xdp-shunter/build/bpf/filter.o
 ```
 
-Zeek does not load the XDP programs itself because of clusters. For more complex environments, some combination of loading the XDP programs before with `xdp-loader` pinned at `/sys/fs/bpf/zeek` on each interface and simply loading with `@load xdp` should work.
+Zeek does not load the XDP programs itself because of clusters. For more complex environments, some combination of loading the XDP programs before with `xdp-loader` pinned at `/sys/fs/bpf/zeek` on each interface and simply loading with `@load xdp-shunt` should work.
 
 ## Building
 
@@ -79,7 +79,7 @@ You may also choose to manually shunt connections based on your own criteria. Yo
 This shunts encrypted sessions, then unshunts when it is inactive for a default amount of time:
 
 ```
-@load xdp
+@load xdp-shunt
 
 redef enum XDP::Shunt::ConnID::ShuntTrigger += { MY_SSL };
 
@@ -116,7 +116,7 @@ The flow-based shunting relies on timeouts to unshunt connections. Because Zeek 
 Shunting with IP pairs is similar:
 
 ```
-@load xdp
+@load xdp-shunt
 
 event XDP::Shunt::IPPair::unshunted_pair(pair: XDP::ip_pair,
     stats: XDP::ShuntedStats)

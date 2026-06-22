@@ -7,5 +7,5 @@
 # __load__.zeek instead.
 #
 
-@load ./types
+@load ./xdp-shunt/types
 

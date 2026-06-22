@@ -10,15 +10,17 @@ pkg_check_modules(LIBBPF REQUIRED IMPORTED_TARGET libbpf)
 include(ZeekPlugin)
 
 zeek_plugin_begin(Zeek XDP_Shunter ${ZEEK_PLUGIN_BEGIN_OPTS})
-zeek_plugin_cc(src/Plugin.cc src/ShuntUtil.cc src/bpf/UserXDP.cc)
-zeek_plugin_bif(src/shunter.bif src/ip_pair_shunter.bif src/conn_id_shunter.bif)
+zeek_plugin_cc(src/Plugin.cc src/xdp-shunt/ShuntUtil.cc src/xdp-shunt/bpf/UserXDP.cc)
+zeek_plugin_bif(src/xdp-shunt/shunter.bif src/xdp-shunt/ip_pair_shunter.bif src/xdp-shunt/conn_id_shunter.bif)
 zeek_plugin_dist_files(README CHANGES COPYING VERSION zeekctl/xdp.py)
-zeek_plugin_scripts(scripts/__load__.zeek scripts/__preload__.zeek scripts/types.zeek
-                    scripts/xdp/__load__.zeek scripts/xdp/bulk.zeek
-                    scripts/xdp/connect.zeek scripts/xdp/main.zeek scripts/xdp/shunt-conn-id.zeek
-                    scripts/xdp/shunt-ip-pair.zeek scripts/xdp/ssl.zeek
+zeek_plugin_scripts(scripts/__preload__.zeek scripts/xdp-shunt/types.zeek
+                    scripts/xdp-shunt/__load__.zeek scripts/xdp-shunt/bulk.zeek
+                    scripts/xdp-shunt/connect.zeek scripts/xdp-shunt/main.zeek scripts/xdp-shunt/shunt-conn-id.zeek
+                    scripts/xdp-shunt/shunt-ip-pair.zeek scripts/xdp-shunt/ssl.zeek
                 )
 zeek_plugin_end()
+
+target_include_directories(Zeek_XDP_Shunter PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/xdp-shunt)
 
 set(canon_name "Zeek_XDP_Shunter")
 set(dist_tarball_dir ${CMAKE_CURRENT_BINARY_DIR}/dist/${canon_name})
