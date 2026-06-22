@@ -1,0 +1,6 @@
+-target
+bpf
+-O2
+-g
+-I../common
+-D__BPF_BUILD__

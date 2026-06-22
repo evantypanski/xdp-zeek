@@ -35,3 +35,5 @@ target_link_libraries(Zeek_XDP_Shunter PRIVATE
     PkgConfig::LIBXDP
     PkgConfig::LIBBPF
 )
+
+add_subdirectory(tools/xdp-loader)
