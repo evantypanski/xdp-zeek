@@ -16,7 +16,7 @@ zeek_plugin_dist_files(README CHANGES COPYING VERSION zeekctl/xdp.py)
 zeek_plugin_scripts(scripts/__preload__.zeek scripts/xdp-shunt/types.zeek
                     scripts/xdp-shunt/__load__.zeek scripts/xdp-shunt/bulk.zeek
                     scripts/xdp-shunt/connect.zeek scripts/xdp-shunt/main.zeek scripts/xdp-shunt/shunt-conn-id.zeek
-                    scripts/xdp-shunt/shunt-ip-pair.zeek scripts/xdp-shunt/ssl.zeek
+                    scripts/xdp-shunt/shunt-ip-pair.zeek scripts/xdp-shunt/ssl.zeek scripts/xdp-shunt/netcontrol.zeek 
                 )
 zeek_plugin_end()
 
